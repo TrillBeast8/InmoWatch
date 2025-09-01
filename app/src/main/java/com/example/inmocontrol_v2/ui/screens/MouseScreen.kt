@@ -1,13 +1,54 @@
-
 package com.example.inmocontrol_v2.ui.screens
-import android.hardware.*; import androidx.compose.foundation.gestures.detectTapGestures; import androidx.compose.foundation.layout.*; import androidx.compose.runtime.*; import androidx.compose.ui.Modifier; import androidx.compose.ui.input.pointer.pointerInput; import androidx.compose.ui.platform.LocalContext
-import com.example.inmocontrol_v2.hid.HidClient; import com.example.inmocontrol_v2.data.SettingsStore
-@Composable fun MouseScreen(){
-    val ctx=LocalContext.current; val sm=ctx.getSystemService(SensorManager::class.java); val gyro=remember{ sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE) }
-    val store=remember{ SettingsStore.get(ctx) }
-    val scale by store.gyroSensitivity.collectAsState(initial=8f)
-    val bx by store.gyroBiasX.collectAsState(initial=0f)
-    val by by store.gyroBiasY.collectAsState(initial=0f)
-    DisposableEffect(scale,bx,by){ val l=object: SensorEventListener{ override fun onSensorChanged(e: SensorEvent){ HidClient.instance()?.move(((e.values[1]-bx)*scale).toInt(), ((e.values[0]-by)*scale).toInt()) } override fun onAccuracyChanged(s: Sensor?, a:Int){} }
-        sm.registerListener(l, gyro, SensorManager.SENSOR_DELAY_GAME); onDispose{ sm.unregisterListener(l) } }
-    Box(Modifier.fillMaxSize().pointerInput(Unit){ detectTapGestures(onTap={ HidClient.instance()?.leftClick() }, onDoubleTap={ HidClient.instance()?.rightClick() }) }){} }
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
+
+@Composable
+fun MouseScreen() {
+    val offsetX = remember { mutableStateOf(0f) }
+    val offsetY = remember { mutableStateOf(0f) }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        offsetX.value += dragAmount.x
+                        offsetY.value += dragAmount.y
+                    }
+                }
+        ) {
+            // Cursor indicator
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(offsetX.value.roundToInt(), offsetY.value.roundToInt()) }
+                    .size(16.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+        }
+    }
+}

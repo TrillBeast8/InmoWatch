@@ -1,35 +1,61 @@
-
 package com.example.inmocontrol_v2.data
+
 import android.content.Context
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-val Context.inmoDataStore by preferencesDataStore("inmo_settings")
-class SettingsStore private constructor(private val ctx: Context) {
-    val autoConnect = ctx.inmoDataStore.data.map { it[AUTO_CONNECT] ?: true }
-    val stayConnected = ctx.inmoDataStore.data.map { it[STAY_CONNECTED] ?: true }
-    val gyroSensitivity = ctx.inmoDataStore.data.map { it[GYRO_SENS] ?: 8f }
-    val scrollSensitivity = ctx.inmoDataStore.data.map { it[SCROLL_SENS] ?: 1.0f }
-    val dpadEightWay = ctx.inmoDataStore.data.map { it[DPAD_8] ?: true }
-    val gyroBiasX = ctx.inmoDataStore.data.map { it[GYRO_BIAS_X] ?: 0f }
-    val gyroBiasY = ctx.inmoDataStore.data.map { it[GYRO_BIAS_Y] ?: 0f }
-    suspend fun setAutoConnect(v:Boolean)=ctx.inmoDataStore.edit{ it[AUTO_CONNECT]=v }
-    suspend fun setStayConnected(v:Boolean)=ctx.inmoDataStore.edit{ it[STAY_CONNECTED]=v }
-    suspend fun setGyroSensitivity(v:Float)=ctx.inmoDataStore.edit{ it[GYRO_SENS]=v }
-    suspend fun setScrollSensitivity(v:Float)=ctx.inmoDataStore.edit{ it[SCROLL_SENS]=v }
-    suspend fun setDpad8(v:Boolean)=ctx.inmoDataStore.edit{ it[DPAD_8]=v }
-    suspend fun setGyroBias(x:Float, y:Float)=ctx.inmoDataStore.edit{ it[GYRO_BIAS_X]=x; it[GYRO_BIAS_Y]=y }
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+
+val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+
+class SettingsStore private constructor(private val context: Context) {
     companion object {
-        private val AUTO_CONNECT = booleanPreferencesKey("auto_connect")
-        private val STAY_CONNECTED = booleanPreferencesKey("stay_connected")
-        private val GYRO_SENS = floatPreferencesKey("gyro_sens")
-        private val SCROLL_SENS = floatPreferencesKey("scroll_sens")
-        private val DPAD_8 = booleanPreferencesKey("dpad_8")
-        private val GYRO_BIAS_X = floatPreferencesKey("gyro_bias_x")
-        private val GYRO_BIAS_Y = floatPreferencesKey("gyro_bias_y")
-        @Volatile private var inst: SettingsStore? = null
-        fun get(ctx: Context): SettingsStore = inst ?: synchronized(this){ inst ?: SettingsStore(ctx.applicationContext).also{ inst = it } }
+        private val KEYBOARD_MODE = booleanPreferencesKey("keyboard_mode")
+        private val MOUSE_MODE = booleanPreferencesKey("mouse_mode")
+        private val TOUCHPAD_MODE = booleanPreferencesKey("touchpad_mode")
+        private val DPAD_MODE = booleanPreferencesKey("dpad_mode")
+        private val MEDIA_MODE = booleanPreferencesKey("media_mode")
+        private val DPAD_EIGHT_WAY = booleanPreferencesKey("dpad_eight_way")
+
+        @Volatile
+        private var INSTANCE: SettingsStore? = null
+
+        fun get(context: Context): SettingsStore {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: SettingsStore(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
+
+    val keyboardMode: Flow<Boolean> = context.settingsDataStore.data.map { it[KEYBOARD_MODE] ?: false }
+    val mouseMode: Flow<Boolean> = context.settingsDataStore.data.map { it[MOUSE_MODE] ?: false }
+    val touchpadMode: Flow<Boolean> = context.settingsDataStore.data.map { it[TOUCHPAD_MODE] ?: false }
+    val dpadMode: Flow<Boolean> = context.settingsDataStore.data.map { it[DPAD_MODE] ?: false }
+    val mediaMode: Flow<Boolean> = context.settingsDataStore.data.map { it[MEDIA_MODE] ?: false }
+    val dpadEightWay: Flow<Boolean> = context.settingsDataStore.data.map { it[DPAD_EIGHT_WAY] ?: true }
+
+    suspend fun setKeyboardMode(enabled: Boolean) {
+        context.settingsDataStore.edit { it[KEYBOARD_MODE] = enabled }
+    }
+    suspend fun setMouseMode(enabled: Boolean) {
+        context.settingsDataStore.edit { it[MOUSE_MODE] = enabled }
+    }
+    suspend fun setTouchpadMode(enabled: Boolean) {
+        context.settingsDataStore.edit { it[TOUCHPAD_MODE] = enabled }
+    }
+    suspend fun setDpadMode(enabled: Boolean) {
+        context.settingsDataStore.edit { it[DPAD_MODE] = enabled }
+    }
+    suspend fun setMediaMode(enabled: Boolean) {
+        context.settingsDataStore.edit { it[MEDIA_MODE] = enabled }
+    }
+    suspend fun setDpadEightWay(enabled: Boolean) {
+        context.settingsDataStore.edit { it[DPAD_EIGHT_WAY] = enabled }
     }
 }
