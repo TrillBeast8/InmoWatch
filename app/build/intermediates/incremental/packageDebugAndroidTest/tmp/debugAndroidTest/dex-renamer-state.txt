@@ -1,4 +1,4 @@
-#Mon Sep 01 05:29:51 PDT 2025
-base.0=D\:\\Users\\duqhildr\\AndroidStudioProjects\\InmoControl_AndroidProject_v4\\app\\build\\intermediates\\dex\\debugAndroidTest\\mergeProjectDexDebugAndroidTest\\0\\classes.dex
+#Mon Sep 01 12:34:58 PDT 2025
+base.0=C\:\\Users\\duran\\AndroidStudioProjects\\InmoWatch\\app\\build\\intermediates\\dex\\debugAndroidTest\\mergeProjectDexDebugAndroidTest\\0\\classes.dex
 path.0=0/classes.dex
 renamed.0=classes.dex

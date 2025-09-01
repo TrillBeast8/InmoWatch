@@ -1,22 +1,49 @@
 package com.example.inmocontrol_v2
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.inmocontrol_v2.ui.screens.*
 import com.example.inmocontrol_v2.ui.theme.InmoTheme
+import androidx.core.app.ActivityCompat
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.remember
+import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
 
 class MainActivity : ComponentActivity() {
+    private var lastBackPressTime: Long = 0
+    private val doubleClickThreshold = 400 // ms
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Request Bluetooth and location permissions
+        val permissions = mutableListOf(
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+        }
+        if (permissions.any { ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }) {
+            ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 1001)
+        }
         setContent {
             InmoTheme {
                 Surface(
@@ -28,12 +55,40 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    @Deprecated("onBackPressed is deprecated")
+    override fun onBackPressed() {
+        val currentTime = System.currentTimeMillis()
+        val context = this
+        val settingsStore = com.example.inmocontrol_v2.data.SettingsStore.get(context)
+        // Use runBlocking directly instead of GlobalScope.launch
+        val featureEnabled = runBlocking {
+            settingsStore.remoteBackDoubleClick.first()
+        }
+        if (featureEnabled) {
+            if (currentTime - lastBackPressTime < doubleClickThreshold) {
+                // Double click detected, send remote back command
+                sendRemoteBackCommand()
+                lastBackPressTime = 0
+            } else {
+                // Single click, go back as usual
+                super.onBackPressed()
+                lastBackPressTime = currentTime
+            }
+        } else {
+            // Feature disabled, default behavior
+            super.onBackPressed()
+        }
+    }
+
+    private fun sendRemoteBackCommand() {
+        com.example.inmocontrol_v2.hid.HidClient.sendBack()
+    }
 }
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-
     NavHost(navController = navController, startDestination = "main_menu") {
         composable("main_menu") {
             MainMenuScreen(onNavigate = { route: String ->
@@ -44,7 +99,34 @@ fun AppNavigation() {
         composable("keyboard") { KeyboardScreen() }
         composable("touchpad") { TouchpadScreen() }
         composable("media") { MediaScreen() }
-        composable("dpad") { DpadScreen() }
-        composable("settings") { SettingsScreen() }
+        composable("dpad") {
+            val context = LocalContext.current
+            val settingsStore = remember { com.example.inmocontrol_v2.data.SettingsStore.get(context) }
+            val dpadEnabled = settingsStore.dpadEnabled.collectAsState(initial = false).value
+            if (dpadEnabled) {
+                DpadScreen()
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("D-pad is disabled in settings.")
+                }
+            }
+        }
+        composable("settings") {
+            SettingsScreen(onNavigate = { route ->
+                navController.navigate(route)
+            })
+        }
+        composable("connect") {
+            ConnectToDeviceScreen(
+                onOpenControls = {
+                    navController.navigate("main_menu")
+                }
+            )
+        }
+        composable("mouse_calibration") {
+            MouseCalibrationScreen(onNavigate = { route: String ->
+                navController.navigate(route)
+            })
+        }
     }
 }

@@ -1,4 +1,4 @@
-com.example.inmocontrol_v2.test.app-androidTest-0 D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\build\generated\res\resValues\androidTest\debug
-com.example.inmocontrol_v2.test.app-mergeDebugAndroidTestResources-1 D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
-com.example.inmocontrol_v2.test.app-mergeDebugAndroidTestResources-2 D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
-com.example.inmocontrol_v2.test.app-merged_res-3 D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\build\intermediates\merged_res\debugAndroidTest
+com.example.inmocontrol_v2.test.app-androidTest-0 C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\generated\res\resValues\androidTest\debug
+com.example.inmocontrol_v2.test.app-mergeDebugAndroidTestResources-1 C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.example.inmocontrol_v2.test.app-mergeDebugAndroidTestResources-2 C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.example.inmocontrol_v2.test.app-merged_res-3 C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\merged_res\debugAndroidTest

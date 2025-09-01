@@ -5,7 +5,7 @@
     android:versionName="1.0" >
 
     <uses-sdk
-        android:minSdkVersion="26"
+        android:minSdkVersion="28"
         android:targetSdkVersion="34" />
 
     <uses-feature android:name="android.hardware.type.watch" />
@@ -51,6 +51,7 @@
         android:extractNativeLibs="false"
         android:icon="@mipmap/ic_launcher"
         android:label="InmoControl"
+        android:testOnly="true"
         android:usesCleartextTraffic="false" >
         <meta-data
             android:name="com.google.android.wearable.standalone"
@@ -101,10 +102,6 @@
             <!-- <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_preview" /> -->
         </service>
 
-        <activity
-            android:name="androidx.compose.ui.tooling.PreviewActivity"
-            android:exported="true" />
-
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="com.example.inmocontrol_v2.androidx-startup"
@@ -119,6 +116,10 @@
                 android:name="androidx.profileinstaller.ProfileInstallerInitializer"
                 android:value="androidx.startup" />
         </provider>
+
+        <activity
+            android:name="androidx.compose.ui.tooling.PreviewActivity"
+            android:exported="true" />
 
         <receiver
             android:name="androidx.profileinstaller.ProfileInstallReceiver"
