@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.example.inmocontrol_v2.app-merged_res-58:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.example.inmocontrol_v2.app-main-60:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.example.inmocontrol_v2.app-merged_res-58:/xml_backup_rules.xml.flat",
+        "source": "com.example.inmocontrol_v2.app-main-60:/xml/backup_rules.xml"
+    }
+]
