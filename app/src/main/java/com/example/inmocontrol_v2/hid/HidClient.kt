@@ -5,10 +5,7 @@ import android.app.Application
 object HidClient {
     private var service: HidService? = null
 
-    fun init(app: Application) {
-        // Directly instantiate HidService for now
-        service = HidService()
-    }
+    fun setService(s: HidService?) { service = s }
 
     fun instance(): HidService? = service
 
@@ -69,5 +66,41 @@ object HidClient {
     }
     fun sendKeyboardReport(report: ByteArray) {
         service?.sendKeyboardReport(report)
+    }
+
+    // Gesture types for Inmo Air 2
+    enum class InmoGesture {
+        SINGLE_TAP, DOUBLE_TAP, LONG_PRESS, SWIPE_FORWARD, SWIPE_BACK, SWIPE_UP, SWIPE_DOWN,
+        DOUBLE_LONG_PRESS, DOUBLE_SWIPE_FORWARD, DOUBLE_SWIPE_BACK, DOUBLE_SWIPE_UP, DOUBLE_SWIPE_DOWN
+    }
+
+    // Gesture to keycode mapping for Inmo Air 2
+    val inmoAir2GestureKeycodes = mapOf(
+        InmoGesture.SINGLE_TAP to 66, // KEYCODE_ENTER
+        InmoGesture.DOUBLE_TAP to 4, // KEYCODE_BACK
+        InmoGesture.LONG_PRESS to 289,
+        InmoGesture.SWIPE_FORWARD to 22, // KEYCODE_DPAD_RIGHT
+        InmoGesture.SWIPE_BACK to 21, // KEYCODE_DPAD_LEFT
+        InmoGesture.SWIPE_UP to 19, // KEYCODE_DPAD_UP
+        InmoGesture.SWIPE_DOWN to 20, // KEYCODE_DPAD_DOWN
+        InmoGesture.DOUBLE_LONG_PRESS to 290
+        // Double finger swipes: continuous reporting, use same keycodes as single swipes
+    )
+
+    // Device profile state (should be set by ConnectToDeviceScreen)
+    var currentDeviceProfile: Any? = null
+
+    fun sendGesture(gesture: InmoGesture) {
+        when (currentDeviceProfile) {
+            is com.example.inmocontrol_v2.ui.screens.DeviceProfile.InmoAir2 -> {
+                val keyCode = inmoAir2GestureKeycodes[gesture]
+                if (keyCode != null) {
+                    sendKey(keyCode)
+                }
+            }
+            else -> {
+                // Fallback: use generic HID logic or ignore
+            }
+        }
     }
 }

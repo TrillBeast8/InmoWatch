@@ -7,14 +7,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.example.inmocontrol_v2.data.SettingsStore
-import com.example.inmocontrol_v2.hid.HidClient
 import androidx.wear.compose.material.Button as WearButton
 import androidx.wear.compose.material.Text as WearText
 import androidx.wear.compose.material.TimeText
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.example.inmocontrol_v2.data.SettingsStore
+import com.example.inmocontrol_v2.hid.HidClient
 
 @Composable
 fun DpadScreen() {
@@ -89,7 +89,7 @@ private fun DpadWearButton(label: String, direction: String, modifier: Modifier 
     }
 }
 
-@Preview(device = "id:wearos_small_round", showBackground = true)
+@Preview(showBackground = true, device = "id:wearos_small_round")
 @Composable
 fun DpadScreenPreview() {
     DpadScreen()

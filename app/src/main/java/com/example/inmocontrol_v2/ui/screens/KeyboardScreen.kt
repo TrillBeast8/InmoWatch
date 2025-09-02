@@ -11,18 +11,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.Button
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Text as WearText
 import androidx.wear.compose.material.TimeText
 import com.example.inmocontrol_v2.hid.HidClient
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.ExperimentalComposeUiApi
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -37,10 +42,17 @@ fun KeyboardScreen() {
     androidx.wear.compose.material.Scaffold {
         TimeText()
         ScalingLazyColumn(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(WindowInsets.safeDrawing.asPaddingValues()),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp),
         ) {
             item {
-                WearText("Keyboard Input", modifier = Modifier.padding(8.dp))
+                WearText(
+                    "Keyboard",
+                    modifier = Modifier.padding(8.dp),
+                    fontSize = 18.sp
+                )
             }
             item {
                 TextField(
@@ -56,25 +68,23 @@ fun KeyboardScreen() {
                 )
             }
             item {
-                androidx.wear.compose.material.Button(
+                Button(
                     onClick = {
                         HidClient.instance()?.sendKeyboardReport(text.value.encodeToByteArray())
-                        // Hide keyboard and clear text after a short delay for smoother UX
                         keyboardController?.hide()
                         text.value = ""
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp)
+                        .padding(horizontal = 16.dp)
                 ) {
-                    WearText("Send")
+                    Text("Send", fontSize = 16.sp)
                 }
             }
         }
     }
 }
 
-// IDE Preview for KeyboardScreen
 @Preview(showBackground = true, device = "id:wearos_small_round")
 @Composable
 fun KeyboardScreenPreview() {

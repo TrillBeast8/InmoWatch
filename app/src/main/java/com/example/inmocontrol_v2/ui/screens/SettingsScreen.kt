@@ -21,7 +21,6 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val sensitivity by settingsStore.sensitivity.collectAsState(initial = 0.5f)
     val remoteBackDoubleClick by settingsStore.remoteBackDoubleClick.collectAsState(initial = false)
-    val dpadEnabled by settingsStore.dpadEnabled.collectAsState(initial = false)
     var feedbackMessage by remember { mutableStateOf("") }
     if (feedbackMessage.isNotEmpty()) {
         Snackbar(
@@ -42,14 +41,36 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
             }
             item {
                 WearText("Pointer Sensitivity", modifier = Modifier.padding(bottom = 8.dp))
+                // Local state for the text field, initialized from sensitivity
+                var sensitivityText by remember { mutableStateOf(sensitivity.toString()) }
+                // Synchronize text field when slider changes
+                LaunchedEffect(sensitivity) {
+                    sensitivityText = String.format("%.2f", sensitivity)
+                }
                 Slider(
                     value = sensitivity,
                     onValueChange = {
                         scope.launch { settingsStore.setSensitivity(it) }
+                        sensitivityText = String.format("%.2f", it)
                     },
                     valueRange = 0.1f..2.0f,
                     steps = 19,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = sensitivityText,
+                    onValueChange = { newText ->
+                        sensitivityText = newText
+                        val floatValue = newText.toFloatOrNull()
+                        if (floatValue != null && floatValue in 0.1f..2.0f) {
+                            scope.launch { settingsStore.setSensitivity(floatValue) }
+                        }
+                    },
+                    label = { Text("Set value") },
+                    singleLine = true,
+                    textStyle = LocalTextStyle.current.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize),
+                    modifier = Modifier.width(80.dp).height(40.dp).padding(horizontal = 16.dp)
                 )
             }
             item {
@@ -57,25 +78,11 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
-                    WearText("Remote Back Button Double-Click", modifier = Modifier.weight(1f))
+                    WearText("Back Button Remap", modifier = Modifier.weight(1f))
                     Switch(
                         checked = remoteBackDoubleClick,
                         onCheckedChange = {
                             scope.launch { settingsStore.setRemoteBackDoubleClick(it) }
-                        }
-                    )
-                }
-            }
-            item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) {
-                    WearText("Enable D-pad", modifier = Modifier.weight(1f))
-                    Switch(
-                        checked = dpadEnabled,
-                        onCheckedChange = {
-                            scope.launch { settingsStore.setDpadEnabled(it) }
                         }
                     )
                 }
@@ -106,7 +113,7 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
     }
 }
 
-@Preview(device = "id:wearos_small_round", showBackground = true)
+@Preview(showBackground = true, device = "id:wearos_small_round")
 @Composable
 fun SettingsScreenPreview() {
     SettingsScreen()

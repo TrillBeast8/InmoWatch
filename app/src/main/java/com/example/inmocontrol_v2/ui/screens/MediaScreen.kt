@@ -5,7 +5,6 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -15,10 +14,8 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speaker
-import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,8 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,15 +30,12 @@ import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.times
 import androidx.wear.compose.material.Button as WearButton
-import androidx.wear.compose.material.ScalingLazyColumn
 import androidx.wear.compose.material.Text as WearText
-import androidx.wear.compose.material.TimeText
 import com.example.inmocontrol_v2.hid.HidClient
 
 @Composable
-fun MediaScreen() {
+fun MediaScreen(isDeviceConnected: Boolean = false) {
     val context = LocalContext.current
     val volume = remember { mutableStateOf(50) }
     val isPlaying = remember { mutableStateOf(false) }
@@ -58,8 +50,20 @@ fun MediaScreen() {
         else -> Icons.Filled.Speaker
     }
     val volumeIcon = if (volume.value == 0) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp
-    androidx.wear.compose.material.Scaffold {
-        TimeText()
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (!isDeviceConnected) {
+            Text(text = "No device connected. Please connect a device first.", color = Color.Red, modifier = Modifier.padding(16.dp))
+            return@Column
+        }
+
+        // Removed top row of three output buttons
+        // Show current output device below controls
+        Text(text = "Output: ${outputDevice.value}", modifier = Modifier.padding(8.dp))
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -85,14 +89,14 @@ fun MediaScreen() {
                 WearText(albumName.value, modifier = Modifier.padding(bottom = 8.dp))
             }
             // Radial controls
-            Box(modifier = Modifier.size(180.dp)) {
+            Box(modifier = Modifier.size(220.dp).offset(y = (-24).dp)) { // Increased size and moved up
                 // Center Play/Pause
                 WearButton(
                     onClick = {
                         isPlaying.value = !isPlaying.value
                         HidClient.playPause()
                     },
-                    modifier = Modifier.align(Alignment.Center)
+                    modifier = Modifier.align(Alignment.Center).size(32.dp) // Reduced button size
                 ) {
                     Image(
                         imageVector = if (isPlaying.value) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -102,18 +106,18 @@ fun MediaScreen() {
                 // Left Previous/Rewind
                 WearButton(
                     onClick = { HidClient.previousTrack() },
-                    modifier = Modifier.align(Alignment.CenterStart)
+                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp).size(32.dp) // Reduced button size
                 ) {
                     Image(imageVector = Icons.Filled.SkipPrevious, contentDescription = "Previous")
                 }
                 // Right Next/Forward
                 WearButton(
                     onClick = { HidClient.nextTrack() },
-                    modifier = Modifier.align(Alignment.CenterEnd)
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp).size(32.dp) // Reduced button size
                 ) {
                     Image(imageVector = Icons.Filled.SkipNext, contentDescription = "Next")
                 }
-                // Grouped output and volume controls below play/pause
+                // Output and volume controls below play/pause
                 Row(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.Center
@@ -142,25 +146,25 @@ fun MediaScreen() {
             }
             // Volume overlay
             if (showVolumeOverlay.value) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xAA000000))
-                        .clickable { showVolumeOverlay.value = false },
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier.align(Alignment.Center).size(120.dp),
+                    color = Color.DarkGray,
+                    shape = CircleShape
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        WearText("Volume", modifier = Modifier.padding(bottom = 8.dp))
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "Volume", color = Color.White)
                         Slider(
                             value = volume.value.toFloat(),
                             onValueChange = {
                                 volume.value = it.toInt()
                                 HidClient.setVolume(volume.value)
                             },
-                            valueRange = 0f..100f,
-                            modifier = Modifier.width(120.dp)
+                            valueRange = 0f..100f
                         )
-                        WearText("${volume.value}%", modifier = Modifier.padding(top = 8.dp))
+                        Text(text = "${volume.value}", color = Color.White)
                     }
                 }
             }
@@ -190,11 +194,11 @@ fun MediaScreen() {
                 artistName.value = ""
                 albumName.value = ""
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             trackName.value = "Permission required"
             artistName.value = ""
             albumName.value = ""
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             trackName.value = "Media error"
             artistName.value = ""
             albumName.value = ""
@@ -202,7 +206,7 @@ fun MediaScreen() {
     }
 }
 
-// Helper to map output device string to int
+// Helper function for output device int
 fun outputDeviceToInt(device: String): Int = when (device) {
     "headphones" -> 0
     "speaker" -> 1
@@ -210,8 +214,9 @@ fun outputDeviceToInt(device: String): Int = when (device) {
     else -> 0
 }
 
+// Preview for small Wear OS circular screen
 @Preview(device = "id:wearos_small_round", showBackground = true)
 @Composable
-fun MediaScreenPreview() {
-    MediaScreen()
+fun MediaScreenWearPreview() {
+    MediaScreen(isDeviceConnected = true)
 }

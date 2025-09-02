@@ -25,10 +25,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -39,6 +40,7 @@ android {
         jvmTarget = "11"
     }
 }
+
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2023.08.00"))
@@ -57,7 +59,7 @@ dependencies {
     implementation("androidx.wear.compose:compose-foundation:1.2.1")
     implementation("androidx.wear.compose:compose-material:1.2.1")
     implementation("androidx.compose.ui:ui-util:1.5.4")
-    implementation("com.google.guava:guava:31.1-android")
-    implementation("androidx.compose.material:material-icons-extended:1.5.4")
-    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material:material-icons-core:1.5.4") // Minimal icons for Compose
+    implementation("androidx.compose.material:material-icons-extended:1.5.4") // Extended icons for Compose
+    implementation("androidx.concurrent:concurrent-futures:1.1.0") // Lightweight future for Wear Tiles
 }

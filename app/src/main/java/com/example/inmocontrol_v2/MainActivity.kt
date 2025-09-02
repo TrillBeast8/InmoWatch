@@ -1,9 +1,14 @@
 package com.example.inmocontrol_v2
 
 import android.Manifest
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -24,10 +29,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
+import com.example.inmocontrol_v2.hid.HidService
+import com.example.inmocontrol_v2.hid.HidClient
 
 class MainActivity : ComponentActivity() {
     private var lastBackPressTime: Long = 0
     private val doubleClickThreshold = 400 // ms
+
+    // ServiceConnection for HidService
+    private var hidServiceBound = false
+    private val hidServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            val service = (binder as HidService.LocalBinder).getService()
+            HidClient.setService(service)
+            hidServiceBound = true
+        }
+        override fun onServiceDisconnected(name: ComponentName?) {
+            HidClient.setService(null)
+            hidServiceBound = false
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +65,9 @@ class MainActivity : ComponentActivity() {
         if (permissions.any { ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }) {
             ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 1001)
         }
+        // Bind to HidService
+        val intent = Intent(this, HidService::class.java)
+        bindService(intent, hidServiceConnection, Context.BIND_AUTO_CREATE)
         setContent {
             InmoTheme {
                 Surface(
@@ -53,6 +77,14 @@ class MainActivity : ComponentActivity() {
                     AppNavigation()
                 }
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (hidServiceBound) {
+            unbindService(hidServiceConnection)
+            hidServiceBound = false
         }
     }
 
@@ -100,16 +132,7 @@ fun AppNavigation() {
         composable("touchpad") { TouchpadScreen() }
         composable("media") { MediaScreen() }
         composable("dpad") {
-            val context = LocalContext.current
-            val settingsStore = remember { com.example.inmocontrol_v2.data.SettingsStore.get(context) }
-            val dpadEnabled = settingsStore.dpadEnabled.collectAsState(initial = false).value
-            if (dpadEnabled) {
-                DpadScreen()
-            } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("D-pad is disabled in settings.")
-                }
-            }
+            DpadScreen()
         }
         composable("settings") {
             SettingsScreen(onNavigate = { route ->

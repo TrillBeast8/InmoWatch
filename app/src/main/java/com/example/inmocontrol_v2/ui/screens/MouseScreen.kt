@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Scaffold
@@ -34,6 +33,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
 @Composable
@@ -135,10 +139,11 @@ fun MouseScreen() {
     Scaffold {
         TimeText()
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(WindowInsets.safeDrawing.asPaddingValues()),
             contentAlignment = androidx.compose.ui.Alignment.Center
         ) {
-            // Define the movement box size
             val boxSize = 200.dp
             val boxPx = with(androidx.compose.ui.platform.LocalDensity.current) { boxSize.toPx() }
             // Clamp offset to stay within box
@@ -200,29 +205,15 @@ fun MouseScreen() {
                             .align(androidx.compose.ui.Alignment.Center)
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(color.copy(alpha = 0.5f))
-                    )
-                    androidx.wear.compose.material.Text(
-                        text = clickFeedback.value ?: "",
-                        modifier = Modifier.align(androidx.compose.ui.Alignment.Center),
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium
+                            .background(color.copy(alpha = 0.4f))
                     )
                 }
             }
-            // Last action indicator
-            androidx.wear.compose.material.Text(
-                text = lastAction.value,
-                modifier = Modifier
-                    .align(androidx.compose.ui.Alignment.BottomCenter)
-                    .then(Modifier.padding(bottom = 16.dp)),
-                style = MaterialTheme.typography.bodyMedium
-            )
         }
     }
 }
 
-@Preview(device = "id:wearos_small_round", showBackground = true)
+@Preview(showBackground = true, device = "id:wearos_small_round")
 @Composable
 fun MouseScreenPreview() {
     MouseScreen()
