@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.inmocontrol_v2.data.SettingsStore
+import java.util.Locale
 import kotlinx.coroutines.launch
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Text as WearText
@@ -21,6 +22,7 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val sensitivity by settingsStore.sensitivity.collectAsState(initial = 0.5f)
     val remoteBackDoubleClick by settingsStore.remoteBackDoubleClick.collectAsState(initial = false)
+    val scrollSensitivity by settingsStore.scrollSensitivity.collectAsState(initial = 1.0f)
     var feedbackMessage by remember { mutableStateOf("") }
     if (feedbackMessage.isNotEmpty()) {
         Snackbar(
@@ -45,13 +47,13 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
                 var sensitivityText by remember { mutableStateOf(sensitivity.toString()) }
                 // Synchronize text field when slider changes
                 LaunchedEffect(sensitivity) {
-                    sensitivityText = String.format("%.2f", sensitivity)
+                    sensitivityText = String.format(Locale.US, "%.2f", sensitivity)
                 }
                 Slider(
                     value = sensitivity,
                     onValueChange = {
                         scope.launch { settingsStore.setSensitivity(it) }
-                        sensitivityText = String.format("%.2f", it)
+                        sensitivityText = String.format(Locale.US, "%.2f", it)
                     },
                     valueRange = 0.1f..2.0f,
                     steps = 19,
@@ -65,6 +67,38 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
                         val floatValue = newText.toFloatOrNull()
                         if (floatValue != null && floatValue in 0.1f..2.0f) {
                             scope.launch { settingsStore.setSensitivity(floatValue) }
+                        }
+                    },
+                    label = { Text("Set value") },
+                    singleLine = true,
+                    textStyle = LocalTextStyle.current.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize),
+                    modifier = Modifier.width(80.dp).height(40.dp).padding(horizontal = 16.dp)
+                )
+            }
+            item {
+                WearText("Scroll Sensitivity", modifier = Modifier.padding(bottom = 8.dp))
+                var scrollSensitivityText by remember { mutableStateOf(scrollSensitivity.toString()) }
+                LaunchedEffect(scrollSensitivity) {
+                    scrollSensitivityText = String.format(Locale.US, "%.2f", scrollSensitivity)
+                }
+                Slider(
+                    value = scrollSensitivity,
+                    onValueChange = {
+                        scope.launch { settingsStore.setScrollSensitivity(it) }
+                        scrollSensitivityText = String.format(Locale.US, "%.2f", it)
+                    },
+                    valueRange = 0.1f..2.0f,
+                    steps = 19,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = scrollSensitivityText,
+                    onValueChange = { newText ->
+                        scrollSensitivityText = newText
+                        val parsed = newText.toFloatOrNull()
+                        if (parsed != null && parsed in 0.1f..2.0f) {
+                            scope.launch { settingsStore.setScrollSensitivity(parsed) }
                         }
                     },
                     label = { Text("Set value") },
@@ -90,7 +124,7 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
             item {
                 Button(
                     onClick = {
-                        onNavigate("connect")
+                        onNavigate("connect_device") // Updated to match new route
                         feedbackMessage = "Connecting to device..."
                     },
                     modifier = Modifier.fillMaxWidth().padding(16.dp)

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -27,10 +26,10 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
-import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import com.example.inmocontrol_v2.hid.HidService
 import com.example.inmocontrol_v2.hid.HidClient
+import androidx.compose.runtime.mutableStateOf
 
 class MainActivity : ComponentActivity() {
     private var lastBackPressTime: Long = 0
@@ -114,23 +113,39 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun sendRemoteBackCommand() {
-        com.example.inmocontrol_v2.hid.HidClient.sendBack()
+        HidClient.sendBack()
     }
 }
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val settingsStore = remember { com.example.inmocontrol_v2.data.SettingsStore.get(context) }
+    val autoReconnectEnabled = settingsStore.autoReconnectEnabled.collectAsState(initial = true)
+
+    // Flag to avoid repeated navigation - fix delegation issue
+    val hasNavigatedToConnect = remember { mutableStateOf(false) }
+
     NavHost(navController = navController, startDestination = "main_menu") {
         composable("main_menu") {
-            MainMenuScreen(onNavigate = { route: String ->
-                navController.navigate(route)
-            })
+            // Check device connection state
+            val isDeviceConnected = HidClient.isConnected()
+            if (!isDeviceConnected && !hasNavigatedToConnect.value && autoReconnectEnabled.value) {
+                hasNavigatedToConnect.value = true
+                navController.navigate("connect")
+            } else {
+                // Reset navigation flag when we're connected or auto-reconnect is disabled
+                hasNavigatedToConnect.value = false
+                MainMenuScreen(onNavigate = { route: String ->
+                    navController.navigate(route)
+                })
+            }
         }
         composable("mouse") { MouseScreen() }
         composable("keyboard") { KeyboardScreen() }
         composable("touchpad") { TouchpadScreen() }
-        composable("media") { MediaScreen() }
+        composable("media") { MediaScreen(isDeviceConnected = HidClient.isConnected()) }
         composable("dpad") {
             DpadScreen()
         }
@@ -142,7 +157,22 @@ fun AppNavigation() {
         composable("connect") {
             ConnectToDeviceScreen(
                 onOpenControls = {
-                    navController.navigate("main_menu")
+                    // Clear the navigation flag and go to main menu
+                    hasNavigatedToConnect.value = false
+                    navController.navigate("main_menu") {
+                        // Clear the back stack so user can't go back to connect screen
+                        popUpTo("main_menu") { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable("connect_device") {
+            ConnectToDeviceScreen(
+                onOpenControls = {
+                    hasNavigatedToConnect.value = false
+                    navController.navigate("main_menu") {
+                        popUpTo("main_menu") { inclusive = true }
+                    }
                 }
             )
         }

@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -32,10 +33,12 @@ import com.example.inmocontrol_v2.hid.HidClient
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun KeyboardScreen() {
-    val text = remember { mutableStateOf("") }
+    val text = rememberSaveable { mutableStateOf("") }
+    // TODO: In the future, support receiving text updates from the paired device and update 'text.value' here.
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    // Request focus only once when the screen opens
+    val messageSent = remember { mutableStateOf(false) }
+    // Request focus only once when the screen is first shown
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
@@ -57,7 +60,10 @@ fun KeyboardScreen() {
             item {
                 TextField(
                     value = text.value,
-                    onValueChange = { text.value = it },
+                    onValueChange = {
+                        text.value = it
+                        messageSent.value = false // Reset sent indicator on new input
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp)
@@ -68,11 +74,26 @@ fun KeyboardScreen() {
                 )
             }
             item {
+                if (messageSent.value) {
+                    WearText(
+                        "Message sent!",
+                        modifier = Modifier.padding(4.dp),
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            item {
                 Button(
                     onClick = {
-                        HidClient.instance()?.sendKeyboardReport(text.value.encodeToByteArray())
+                        try {
+                            HidClient.instance()?.sendKeyboardReport(text.value.encodeToByteArray())
+                        } catch (e: Exception) {
+                            // Optionally show error feedback
+                        }
                         keyboardController?.hide()
-                        text.value = ""
+                        messageSent.value = true
+                        // Optionally clear text: text.value = ""
                     },
                     modifier = Modifier
                         .fillMaxWidth()

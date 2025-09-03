@@ -25,6 +25,10 @@ class SettingsStore private constructor(private val context: Context) {
         private val CALIBRATION_MAX_Y = floatPreferencesKey("calibration_max_y")
         private val CALIBRATION_CENTER_X = floatPreferencesKey("calibration_center_x")
         private val CALIBRATION_CENTER_Y = floatPreferencesKey("calibration_center_y")
+        private val SCROLL_SENSITIVITY = floatPreferencesKey("scroll_sensitivity")
+        private val LAST_CONNECTED_DEVICE_NAME = stringPreferencesKey("last_connected_device_name")
+        private val LAST_CONNECTED_DEVICE_ADDRESS = stringPreferencesKey("last_connected_device_address")
+        private val AUTO_RECONNECT_ENABLED = booleanPreferencesKey("auto_reconnect_enabled")
 
         @Volatile
         private var INSTANCE: SettingsStore? = null
@@ -52,6 +56,11 @@ class SettingsStore private constructor(private val context: Context) {
             it[BASELINE_ACCEL_Z] ?: 0f
         )
     }
+    val scrollSensitivity: Flow<Float> = context.settingsDataStore.data.map { it[SCROLL_SENSITIVITY] ?: 1.0f }
+    val lastConnectedDeviceName: Flow<String?> = context.settingsDataStore.data.map { it[LAST_CONNECTED_DEVICE_NAME] }
+    val lastConnectedDeviceAddress: Flow<String?> = context.settingsDataStore.data.map { it[LAST_CONNECTED_DEVICE_ADDRESS] }
+    val autoReconnectEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[AUTO_RECONNECT_ENABLED] ?: true }
+
     suspend fun setSensitivity(value: Float) {
         context.settingsDataStore.edit { it[SENSITIVITY] = value }
     }
@@ -72,6 +81,9 @@ class SettingsStore private constructor(private val context: Context) {
             it[BASELINE_ACCEL_Z] = values.getOrNull(2) ?: 0f
         }
     }
+    suspend fun setScrollSensitivity(value: Float) {
+        context.settingsDataStore.edit { it[SCROLL_SENSITIVITY] = value }
+    }
     suspend fun saveCalibration(
         minX: Float,
         minY: Float,
@@ -90,5 +102,22 @@ class SettingsStore private constructor(private val context: Context) {
             it[CALIBRATION_CENTER_Y] = centerY
             it[SENSITIVITY] = sensitivity
         }
+    }
+    suspend fun setLastConnectedDevice(name: String, address: String) {
+        context.settingsDataStore.edit {
+            it[LAST_CONNECTED_DEVICE_NAME] = name
+            it[LAST_CONNECTED_DEVICE_ADDRESS] = address
+        }
+    }
+
+    suspend fun clearLastConnectedDevice() {
+        context.settingsDataStore.edit {
+            it.remove(LAST_CONNECTED_DEVICE_NAME)
+            it.remove(LAST_CONNECTED_DEVICE_ADDRESS)
+        }
+    }
+
+    suspend fun setAutoReconnectEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { it[AUTO_RECONNECT_ENABLED] = enabled }
     }
 }

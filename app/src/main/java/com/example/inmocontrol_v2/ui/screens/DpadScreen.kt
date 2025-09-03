@@ -6,11 +6,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.wear.compose.material.Button as WearButton
 import androidx.wear.compose.material.Text as WearText
 import androidx.wear.compose.material.TimeText
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.inmocontrol_v2.data.SettingsStore
@@ -68,7 +68,13 @@ private fun DpadWearButton(label: String, direction: String, modifier: Modifier 
     val backgroundColor = if (isPressed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
     val contentColor = if (isPressed) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
     WearButton(
-        onClick = { HidClient.dpad(directionToInt(direction)) },
+        onClick = {
+            try {
+                HidClient.instance()?.dpad(directionToInt(direction))
+            } catch (e: Exception) {
+                // Optionally show error feedback
+            }
+        },
         modifier = modifier
             .size(28.dp)
             .pointerInput(Unit) {

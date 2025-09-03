@@ -1,4 +1,3 @@
-
 pluginManagement {
     repositories {
         google()
@@ -15,7 +14,12 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS);
     repositories {
-        google(); mavenCentral()
+        google()
+        mavenCentral()
+        jcenter()
+        maven { url = uri("https://jitpack.io") }
+        //add inmosdk repositories
+        maven { url = uri("https://gitee.com/inmolens/inmo-ar-sdk/raw/master") }
     }
 }
 rootProject.name = "InmoControl"

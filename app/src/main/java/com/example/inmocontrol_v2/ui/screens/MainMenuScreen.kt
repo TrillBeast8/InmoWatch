@@ -12,22 +12,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.ui.Alignment
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun MainMenuScreen(onNavigate: (String) -> Unit = {}) {
+    val connectionStateViewModel: ConnectionStateViewModel = viewModel()
+    val isConnected = connectionStateViewModel.isConnected
+    // Auto-launch connect screen if not connected
+    androidx.compose.runtime.LaunchedEffect(isConnected) {
+        if (!isConnected) {
+            onNavigate("connect")
+        }
+    }
     val menuItems = listOf(
         "Mouse" to "mouse",
         "Keyboard" to "keyboard",
@@ -44,7 +44,7 @@ fun MainMenuScreen(onNavigate: (String) -> Unit = {}) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(WindowInsets.safeDrawing.asPaddingValues()),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             items(menuItems.size) { index ->
                 val (label, route) = menuItems[index]

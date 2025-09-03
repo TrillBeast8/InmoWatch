@@ -11,10 +11,8 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothProfile
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
@@ -36,13 +34,28 @@ class HidService : Service() {
     private var connectedDevice: BluetoothDevice? = null
     private lateinit var reportCharacteristic: BluetoothGattCharacteristic
 
+    // Enhanced connection stability features
     private var lastConnectedDevice: BluetoothDevice? = null
     private var reconnectJob: Job? = null
-    private val maxReconnectAttempts = 3
-    private val reconnectDelayMillis = 2000L
+    private var connectionMonitorJob: Job? = null
+    private var heartbeatJob: Job? = null
+    private val maxReconnectAttempts = 5 // Increased from 3
+    private val reconnectDelayMillis = 1500L // Reduced from 2000L for faster reconnect
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var reconnectGatt: BluetoothGatt? = null
     private var reconnectGattCallback: BluetoothGattCallback? = null
+
+    // Connection stability monitoring (like Wear Mouse)
+    private var lastActivityTime = System.currentTimeMillis()
+    private var isStableConnection = false
+    private val connectionTimeoutMs = 15000L // 15 seconds without activity = unstable
+    private val heartbeatIntervalMs = 5000L // Send heartbeat every 5 seconds
+    private val stabilityCheckIntervalMs = 3000L // Check connection every 3 seconds
+
+    // Connection quality metrics
+    private var packetsSent = 0
+    private var packetsAcknowledged = 0
+    private var connectionStartTime = 0L
 
     companion object {
         // HID Service UUID (Bluetooth SIG)
@@ -63,7 +76,7 @@ class HidService : Service() {
         fun getService(): HidService = this@HidService
     }
 
-    override fun onBind(intent: Intent?): IBinder? = binder
+    override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onCreate() {
         super.onCreate()
@@ -81,6 +94,10 @@ class HidService : Service() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
             gattServer?.close()
         }
+        // Cancel any ongoing jobs
+        reconnectJob?.cancel()
+        connectionMonitorJob?.cancel()
+        heartbeatJob?.cancel()
     }
 
     private fun setupGattServer() {
@@ -130,7 +147,8 @@ class HidService : Service() {
             0xC0.toByte()        // End Collection
             // Add keyboard descriptor if needed
         )
-        reportMapChar.value = reportMap
+        @Suppress("DEPRECATION")
+        reportMapChar.setValue(reportMap)
         hidService.addCharacteristic(reportMapChar)
 
         // Protocol Mode Characteristic
@@ -139,7 +157,8 @@ class HidService : Service() {
             BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
             BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
         )
-        protocolModeChar.value = byteArrayOf(0x01) // Report Protocol Mode
+        @Suppress("DEPRECATION")
+        protocolModeChar.setValue(byteArrayOf(0x01)) // Report Protocol Mode
         hidService.addCharacteristic(protocolModeChar)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
@@ -151,55 +170,39 @@ class HidService : Service() {
 
     private val gattServerCallback = object : BluetoothGattServerCallback() {
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                connectedDevice = device
-                lastConnectedDevice = device
-                Log.d("HidService", "Device connected: $device")
-                reconnectJob?.cancel()
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                Log.d("HidService", "Device disconnected")
-                connectedDevice = null
-                // Only autoreconnect for INMO Air2
-                if (lastConnectedDevice?.name?.contains("Inmo Air 2", ignoreCase = true) == true) {
+            when (newState) {
+                BluetoothProfile.STATE_CONNECTED -> {
+                    connectedDevice = device
+                    lastConnectedDevice = device
+                    connectionStartTime = System.currentTimeMillis()
+                    lastActivityTime = System.currentTimeMillis()
+                    packetsSent = 0
+                    packetsAcknowledged = 0
+                    isStableConnection = false
+
+                    Log.d("HidService", "Device connected: $device")
+
+                    // Cancel any ongoing reconnection attempts
                     reconnectJob?.cancel()
-                    reconnectJob = serviceScope.launch {
-                        var attempt = 0
-                        var success = false
-                        while (attempt < maxReconnectAttempts && !success) {
-                            Log.d("HidService", "Reconnect attempt "+(attempt+1))
-                            // Broadcast attempt
-                            sendReconnectStatusBroadcast("attempt", attempt+1, lastConnectedDevice?.name)
-                            try {
-                                if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                                    reconnectGatt?.close()
-                                    reconnectGattCallback = object : BluetoothGattCallback() {
-                                        override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-                                            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                                                connectedDevice = gatt.device
-                                                success = true
-                                                Log.d("HidService", "Reconnected successfully (client)")
-                                                if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                                                    sendReconnectStatusBroadcast("success", attempt+1, gatt.device.name)
-                                                } else {
-                                                    Log.e("HidService", "BLUETOOTH_CONNECT permission not granted for sendReconnectStatusBroadcast")
-                                                }
-                                            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                                                Log.d("HidService", "Reconnect client disconnected")
-                                            }
-                                        }
-                                    }
-                                    reconnectGatt = lastConnectedDevice?.connectGatt(this@HidService, false, reconnectGattCallback!!)
-                                    delay(reconnectDelayMillis)
-                                }
-                            } catch (e: Exception) {
-                                Log.e("HidService", "Reconnect error: ${e.message}")
-                            }
-                            attempt++
-                        }
-                        if (!success) {
-                            Log.e("HidService", "Failed to reconnect after $maxReconnectAttempts attempts")
-                            sendReconnectStatusBroadcast("failure", attempt, lastConnectedDevice?.name)
-                        }
+                    connectionMonitorJob?.cancel()
+                    heartbeatJob?.cancel()
+
+                    // Start enhanced connection monitoring
+                    startConnectionMonitoring()
+                    startAdaptiveHeartbeat()
+                }
+                BluetoothProfile.STATE_DISCONNECTED -> {
+                    Log.d("HidService", "Device disconnected (status: $status)")
+                    val wasConnected = connectedDevice != null
+                    connectedDevice = null
+
+                    // Stop monitoring jobs
+                    connectionMonitorJob?.cancel()
+                    heartbeatJob?.cancel()
+
+                    // Enhanced reconnection logic for all devices, not just Inmo Air2
+                    if (wasConnected && lastConnectedDevice != null) {
+                        startSmartReconnection()
                     }
                 }
             }
@@ -214,6 +217,10 @@ class HidService : Service() {
             offset: Int,
             value: ByteArray?
         ) {
+            // Update activity timestamp
+            lastActivityTime = System.currentTimeMillis()
+            packetsAcknowledged++
+
             if (characteristic?.uuid == REPORT_CHAR_UUID && value != null) {
                 // Automatic mode detection
                 when {
@@ -236,7 +243,27 @@ class HidService : Service() {
                     // Add touchpad detection logic if needed
                 }
             }
-            super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value)
+
+            if (responseNeeded) {
+                if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
+                }
+            }
+        }
+
+        override fun onCharacteristicReadRequest(
+            device: BluetoothDevice?,
+            requestId: Int,
+            offset: Int,
+            characteristic: BluetoothGattCharacteristic?
+        ) {
+            // Update activity timestamp
+            lastActivityTime = System.currentTimeMillis()
+
+            if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                @Suppress("DEPRECATION")
+                gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, characteristic?.getValue())
+            }
         }
     }
     private fun sendReconnectStatusBroadcast(status: String, attempt: Int, deviceName: String?) {
@@ -249,6 +276,7 @@ class HidService : Service() {
 
     // Use setValue() instead of deprecated .value for BluetoothGattCharacteristic
     private fun setCharacteristicValue(characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+        @Suppress("DEPRECATION")
         characteristic.setValue(value)
     }
 
@@ -262,6 +290,7 @@ class HidService : Service() {
         connectedDevice?.let {
             setCharacteristicValue(reportCharacteristic, report)
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                @Suppress("DEPRECATION")
                 gattServer?.notifyCharacteristicChanged(it, reportCharacteristic, false)
             } else {
                 Log.e("HidService", "BLUETOOTH_CONNECT permission not granted for notifyCharacteristicChanged")
@@ -327,6 +356,7 @@ class HidService : Service() {
         connectedDevice?.let {
             setCharacteristicValue(reportCharacteristic, report)
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                @Suppress("DEPRECATION")
                 gattServer?.notifyCharacteristicChanged(it, reportCharacteristic, false)
             } else {
                 Log.e("HidService", "BLUETOOTH_CONNECT permission not granted for notifyCharacteristicChanged")
@@ -365,6 +395,10 @@ class HidService : Service() {
     // Volume control
     fun setVolume(volume: Int) {
         if (currentMode == InputMode.MEDIA) {
+            if (connectedDevice == null || gattServer == null) {
+                Log.e("HidService", "No connected device or GATT server for setVolume")
+                return
+            }
             // volume: 1=up, -1=down
             val usage = when (volume) {
                 1 -> 0xE9 // Volume Up
@@ -385,6 +419,10 @@ class HidService : Service() {
     // Media controls
     fun playPause() {
         if (currentMode == InputMode.MEDIA) {
+            if (connectedDevice == null || gattServer == null) {
+                Log.e("HidService", "No connected device or GATT server for playPause")
+                return
+            }
             val report = byteArrayOf(0xCD.toByte(), 0x00) // Play/Pause
             sendReport(report)
             sendReport(byteArrayOf(0x00, 0x00))
@@ -394,6 +432,10 @@ class HidService : Service() {
     }
     fun previousTrack() {
         if (currentMode == InputMode.MEDIA) {
+            if (connectedDevice == null || gattServer == null) {
+                Log.e("HidService", "No connected device or GATT server for previousTrack")
+                return
+            }
             val report = byteArrayOf(0xB6.toByte(), 0x00) // Previous Track
             sendReport(report)
             sendReport(byteArrayOf(0x00, 0x00))
@@ -403,6 +445,10 @@ class HidService : Service() {
     }
     fun nextTrack() {
         if (currentMode == InputMode.MEDIA) {
+            if (connectedDevice == null || gattServer == null) {
+                Log.e("HidService", "No connected device or GATT server for nextTrack")
+                return
+            }
             val report = byteArrayOf(0xB5.toByte(), 0x00) // Next Track
             sendReport(report)
             sendReport(byteArrayOf(0x00, 0x00))
@@ -410,41 +456,17 @@ class HidService : Service() {
             Log.d("HidService", "Ignoring nextTrack: current mode is $currentMode")
         }
     }
-
-    // Switch output (Android local + HID custom)
     fun switchOutput(output: Int) {
-        // Try Android AudioManager for local output
-        val audioManager = applicationContext.getSystemService(AUDIO_SERVICE) as? AudioManager
-        when (output) {
-            0 -> { // Headphones
-                audioManager?.let {
-                    it.isSpeakerphoneOn = false
-                    it.mode = AudioManager.MODE_IN_COMMUNICATION
-                }
-                Log.d("HidService", "Switched to headphones (wired/Bluetooth if available)")
+        if (currentMode == InputMode.MEDIA) {
+            if (connectedDevice == null || gattServer == null) {
+                Log.e("HidService", "No connected device or GATT server for switchOutput")
+                return
             }
-            1 -> { // Speaker
-                audioManager?.let {
-                    it.isSpeakerphoneOn = true
-                    it.mode = AudioManager.MODE_IN_COMMUNICATION
-                }
-                Log.d("HidService", "Switched to speaker")
-            }
-            2 -> { // Phone earpiece
-                audioManager?.let {
-                    it.isSpeakerphoneOn = false
-                    it.mode = AudioManager.MODE_IN_COMMUNICATION
-                }
-                Log.d("HidService", "Switched to phone earpiece")
-            }
-            else -> {
-                Log.d("HidService", "Unknown output device")
-            }
+            // Implement output switching logic here if supported
+            Log.d("HidService", "Switching output to $output (stub)")
+        } else {
+            Log.d("HidService", "Ignoring switchOutput: current mode is $currentMode")
         }
-        // For remote/Bluetooth HID, send a custom report (if supported)
-        val report = byteArrayOf(0x00, output.toByte())
-        sendReport(report)
-        Log.d("HidService", "Sent HID report for output switch: $output")
     }
 
     // Send a single key press (keyboard HID report)
@@ -473,12 +495,96 @@ class HidService : Service() {
         }
     }
 
-    fun getInputMode(): InputMode = currentMode
-
     // Public method to connect to a Bluetooth device
     fun connect(device: BluetoothDevice) {
         connectedDevice = device
         Log.d("HidService", "Connected to device: $device")
         // Add any additional connection logic here if needed
+    }
+
+    private fun startConnectionMonitoring() {
+        connectionMonitorJob = serviceScope.launch {
+            while (isActive) {
+                delay(stabilityCheckIntervalMs)
+
+                if (connectedDevice == null) {
+                    // If disconnected, attempt to reconnect
+                    startSmartReconnection() // Or appropriate status
+                    continue // Skip the rest of the loop until reconnected
+                }
+
+                // Check connection stability only if connected
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastActivityTime > connectionTimeoutMs) {
+                    // Connection is unstable, attempt to reconnect
+                    Log.w("HidService", "Connection unstable, attempting to reconnect")
+                    if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        sendReconnectStatusBroadcast("unstable", 0, connectedDevice?.name)
+                    }
+                    startSmartReconnection() // Indicate failure
+                } else {
+                    // Connection is stable
+                    isStableConnection = true
+                }
+            }
+        }
+    }
+
+    private fun startAdaptiveHeartbeat() {
+        heartbeatJob = serviceScope.launch {
+            while (connectedDevice != null) {
+                delay(heartbeatIntervalMs)
+                // Send a heartbeat signal (can be a dummy report or actual data)
+                val heartbeatReport = byteArrayOf(0x00, 0x00, 0x00, 0x00)
+                sendReport(heartbeatReport)
+                Log.d("HidService", "Adaptive heartbeat sent")
+            }
+        }
+    }
+
+    private fun startSmartReconnection() {
+        if (reconnectJob?.isActive == true) {
+            Log.d("HidService", "Reconnection already in progress")
+            return
+        }
+        reconnectJob = serviceScope.launch {
+            var attempt = 0
+            var success = false
+            while (attempt < maxReconnectAttempts && !success && isActive) {
+                Log.d("HidService", "Smart reconnect attempt "+(attempt+1))
+                // Broadcast attempt
+                sendReconnectStatusBroadcast("attempt", attempt+1, lastConnectedDevice?.name)
+                try {
+                    if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        reconnectGatt?.close()
+                        reconnectGattCallback = object : BluetoothGattCallback() {
+                            override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+                                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                                    connectedDevice = gatt.device
+                                    success = true
+                                    Log.d("HidService", "Reconnected successfully (smart)")
+                                    if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                                        sendReconnectStatusBroadcast("success", attempt+1, gatt.device.name)
+                                    } else {
+                                        Log.e("HidService", "BLUETOOTH_CONNECT permission not granted for sendReconnectStatusBroadcast")
+                                    }
+                                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                                    Log.d("HidService", "Reconnect client disconnected (smart)")
+                                }
+                            }
+                        }
+                        reconnectGatt = lastConnectedDevice?.connectGatt(this@HidService, false, reconnectGattCallback!!)
+                        delay(reconnectDelayMillis)
+                    }
+                } catch (e: Exception) {
+                    Log.e("HidService", "Reconnect error (smart): ${e.message}")
+                }
+                attempt++
+            }
+            if (!success) {
+                Log.e("HidService", "Failed to reconnect after $maxReconnectAttempts attempts (smart)")
+                sendReconnectStatusBroadcast("failure", attempt, lastConnectedDevice?.name)
+            }
+        }
     }
 }

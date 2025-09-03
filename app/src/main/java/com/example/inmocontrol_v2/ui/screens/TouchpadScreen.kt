@@ -4,16 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -21,13 +21,18 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Text as WearText
 import androidx.wear.compose.material.TimeText
 import com.example.inmocontrol_v2.hid.HidClient
+import java.util.Locale
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 @Composable
 fun TouchpadScreen() {
     val coroutineScope = rememberCoroutineScope()
     val lastAction = remember { mutableStateOf("None") }
     val isDragging = remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val settingsStore = remember { com.example.inmocontrol_v2.data.SettingsStore.get(context) }
+    val scrollSensitivity = settingsStore.scrollSensitivity.collectAsState(initial = 1.0f).value
     androidx.wear.compose.material.Scaffold {
         TimeText()
         Box(
@@ -40,13 +45,25 @@ fun TouchpadScreen() {
                         onTap = {
                             coroutineScope.launch {
                                 lastAction.value = "Left Click"
-                                HidClient.instance()?.mouseLeftClick()
+                                try {
+                                    HidClient.instance()?.mouseLeftClick()
+                                } catch (e: Exception) {}
                             }
                         },
                         onLongPress = {
                             coroutineScope.launch {
                                 lastAction.value = "Right Click"
-                                HidClient.instance()?.mouseRightClick()
+                                try {
+                                    HidClient.instance()?.mouseRightClick()
+                                } catch (e: Exception) {}
+                            }
+                        },
+                        onDoubleTap = {
+                            coroutineScope.launch {
+                                lastAction.value = "Right Click (Double Tap)"
+                                try {
+                                    HidClient.instance()?.mouseRightClick()
+                                } catch (e: Exception) {}
                             }
                         }
                     )
@@ -55,7 +72,7 @@ fun TouchpadScreen() {
                     detectDragGestures(
                         onDragStart = {
                             isDragging.value = true
-                            lastAction.value = "Drag Start"
+                            lastAction.value = "Drag"
                         },
                         onDragEnd = {
                             isDragging.value = false
@@ -63,12 +80,37 @@ fun TouchpadScreen() {
                         },
                         onDragCancel = {
                             isDragging.value = false
-                            lastAction.value = "Drag Cancel"
+                            lastAction.value = "Drag Null"
                         },
-                        onDrag = { change, dragAmount ->
+                        onDrag = { change: PointerInputChange, dragAmount: androidx.compose.ui.geometry.Offset ->
                             coroutineScope.launch {
-                                lastAction.value = "Dragging"
-                                HidClient.instance()?.mouseDragMove(dragAmount.x.toInt(), dragAmount.y.toInt())
+                                // Bidirectional scrolling with sensitivity
+                                if (abs(dragAmount.y) > abs(dragAmount.x) && abs(dragAmount.y) > 10f) {
+                                    val scaledY = (dragAmount.y * scrollSensitivity).toInt()
+                                    val direction = if (scaledY < 0) "Scroll Up" else "Scroll Down"
+                                    lastAction.value = direction
+                                    try {
+                                        HidClient.instance()?.mouseScroll(0, scaledY)
+                                    } catch (e: Exception) {
+                                        // Handle scroll error
+                                    }
+                                } else if (abs(dragAmount.x) > abs(dragAmount.y) && abs(dragAmount.x) > 10f) {
+                                    val scaledX = (dragAmount.x * scrollSensitivity).toInt()
+                                    val direction = if (scaledX < 0) "Scroll Left" else "Scroll Right"
+                                    lastAction.value = direction
+                                    try {
+                                        HidClient.instance()?.mouseScroll(scaledX, 0)
+                                    } catch (e: Exception) {
+                                        // Handle scroll error
+                                    }
+                                } else {
+                                    lastAction.value = "Dragging"
+                                    try {
+                                        HidClient.instance()?.mouseDragMove(dragAmount.x.toInt(), dragAmount.y.toInt())
+                                    } catch (e: Exception) {
+                                        // Handle drag error
+                                    }
+                                }
                             }
                         }
                     )

@@ -176,6 +176,19 @@ fun MouseScreen() {
                         )
                     }
             ) {
+                // Moving circle indicator
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .offset {
+                            IntOffset(
+                                clampedX.roundToInt(),
+                                clampedY.roundToInt()
+                            )
+                        }
+                        .clip(CircleShape)
+                        .background(Color.Blue.copy(alpha = 0.7f))
+                )
                 // Static origin marker (dot)
                 Box(
                     modifier = Modifier
@@ -209,6 +222,14 @@ fun MouseScreen() {
                     )
                 }
             }
+            // Show last action at the bottom
+            androidx.wear.compose.material.Text(
+                text = "Last Action: ${lastAction.value}",
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                    .padding(bottom = 16.dp),
+                fontSize = 14.sp
+            )
         }
     }
 }

@@ -103,4 +103,8 @@ object HidClient {
             }
         }
     }
+
+    fun isConnected(): Boolean {
+        return service != null
+    }
 }
