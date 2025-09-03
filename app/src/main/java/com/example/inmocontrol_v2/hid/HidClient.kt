@@ -1,11 +1,16 @@
 package com.example.inmocontrol_v2.hid
 
 import android.app.Application
+import com.example.inmocontrol_v2.ui.screens.DeviceProfile
 
 object HidClient {
     private var service: HidService? = null
 
-    fun setService(s: HidService?) { service = s }
+    fun setService(s: HidService?) {
+        service = s
+        // Pass the current device profile to the service
+        s?.currentDeviceProfile = currentDeviceProfile as? DeviceProfile
+    }
 
     fun instance(): HidService? = service
 
@@ -89,6 +94,11 @@ object HidClient {
 
     // Device profile state (should be set by ConnectToDeviceScreen)
     var currentDeviceProfile: Any? = null
+        set(value) {
+            field = value
+            // Update the service's device profile when this is changed
+            service?.currentDeviceProfile = value as? DeviceProfile
+        }
 
     fun sendGesture(gesture: InmoGesture) {
         when (currentDeviceProfile) {
@@ -105,6 +115,6 @@ object HidClient {
     }
 
     fun isConnected(): Boolean {
-        return service != null
+        return service?.isDeviceConnected() ?: false
     }
 }

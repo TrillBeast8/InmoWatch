@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:2:1-64:12
-INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:2:1-64:12
-INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:2:1-64:12
-INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:2:1-64:12
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:2:1-64:12
+INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:2:1-64:12
+INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:2:1-64:12
+INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:2:1-64:12
 MERGED from [androidx.wear.compose:compose-material-core:1.2.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\a3207f701973eb38625071e37b5946c5\transformed\compose-material-core-1.2.1\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.wear.compose:compose-ui-tooling:1.2.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\7e42d29c604cd4436e64682231fa3c48\transformed\compose-ui-tooling-1.2.1\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.wear.compose:compose-navigation:1.2.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\a51177ad8d7e4c650cc35e2b09cb1a92\transformed\compose-navigation-1.2.1\AndroidManifest.xml:2:1-7:12
@@ -68,84 +68,84 @@ MERGED from [androidx.arch.core:core-runtime:2.2.0] D:\Users\duqhildr\.gradle\ca
 MERGED from [androidx.tracing:tracing:1.0.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\fbbb170e8b5de97b07b762ae0cbddebd\transformed\tracing-1.0.0\AndroidManifest.xml:17:1-24:12
 MERGED from [com.inmo:inmo_arsdk:0.0.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\03544b3bf17469ae207781acbc8174f0\transformed\inmo_arsdk-0.0.1\AndroidManifest.xml:2:1-9:12
 	package
-		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml
+		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml
 	android:versionName
-		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml
+		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml
 	android:versionCode
-		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml
+		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml
 	xmlns:android
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:2:11-69
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:2:11-69
 uses-feature#android.hardware.type.watch
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:3:5-64
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:3:5-64
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:3:19-61
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:3:19-61
 uses-feature#android.hardware.bluetooth
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:4:5-88
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:4:5-88
 	android:required
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:4:61-85
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:4:61-85
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:4:19-60
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:4:19-60
 uses-feature#android.hardware.bluetooth_le
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:5:5-91
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:5:5-91
 	android:required
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:5:64-88
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:5:64-88
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:5:19-63
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:5:19-63
 uses-feature#android.hardware.sensor.gyroscope
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:6:5-95
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:6:5-95
 	android:required
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:6:68-92
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:6:68-92
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:6:19-67
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:6:19-67
 uses-permission#android.permission.BLUETOOTH
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:8:5-68
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:8:5-68
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:8:22-65
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:8:22-65
 uses-permission#android.permission.BLUETOOTH_ADMIN
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:9:5-74
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:9:5-74
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:9:22-71
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:9:22-71
 uses-permission#android.permission.BLUETOOTH_CONNECT
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:10:5-76
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:10:5-76
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:10:22-73
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:10:22-73
 uses-permission#android.permission.BLUETOOTH_ADVERTISE
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:11:5-78
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:11:5-78
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:11:22-75
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:11:22-75
 uses-permission#android.permission.BLUETOOTH_SCAN
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:12:5-120
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:12:5-120
 	android:usesPermissionFlags
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:12:71-117
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:12:71-117
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:12:22-70
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:12:22-70
 uses-permission#android.permission.FOREGROUND_SERVICE
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:13:5-77
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:13:5-77
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:13:22-74
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:13:22-74
 uses-permission#android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:14:5-94
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:14:5-94
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:14:22-91
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:14:22-91
 uses-permission#android.permission.FOREGROUND_SERVICE_DATA_SYNC
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:15:5-87
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:15:5-87
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:15:22-84
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:15:22-84
 uses-permission#android.permission.POST_NOTIFICATIONS
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:16:5-77
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:16:5-77
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:16:22-74
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:16:22-74
 uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:17:5-81
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:17:5-81
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:17:22-78
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:17:22-78
 uses-permission#android.permission.MODIFY_AUDIO_SETTINGS
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:18:5-80
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:18:5-80
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:18:22-77
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:18:22-77
 application
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:20:5-63:19
-INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:20:5-63:19
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:20:5-63:19
+INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:20:5-63:19
 MERGED from [androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.lifecycle:lifecycle-process:2.6.2] D:\Users\duqhildr\.gradle\caches\8.13\transforms\d67868ff57a599130ac96602b3741dad\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:23:5-33:19
@@ -161,99 +161,99 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] D:\Users\duqhildr\.gradle\c
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\fe7614b38a6c3b33e316fe326dcd17ab\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\fe7614b38a6c3b33e316fe326dcd17ab\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
 	android:extractNativeLibs
-		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml
+		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.12.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:28:18-86
 	android:label
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:22:9-36
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:22:9-36
 	android:icon
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:23:9-43
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:23:9-43
 	android:allowBackup
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:21:9-35
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:21:9-35
 	android:usesCleartextTraffic
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:24:9-45
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:24:9-45
 meta-data#com.google.android.wearable.standalone
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:26:9-97
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:26:9-97
 	android:value
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:26:74-94
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:26:74-94
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:26:20-73
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:26:20-73
 activity#com.example.inmocontrol_v2.MainActivity
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:28:9-39:20
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:28:9-39:20
 	android:exported
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:28:48-71
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:28:48-71
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:28:19-47
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:28:19-47
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:29:13-32:29
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:29:13-32:29
 action#android.intent.action.MAIN
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:30:17-69
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:30:17-69
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:30:25-66
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:30:25-66
 category#android.intent.category.LAUNCHER
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:31:17-77
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:31:17-77
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:31:27-74
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:31:27-74
 intent-filter#action:name:android.intent.action.VIEW+category:name:android.intent.category.BROWSABLE+category:name:android.intent.category.DEFAULT+data:host:open+data:scheme:inmo
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:33:13-38:29
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:33:13-38:29
 action#android.intent.action.VIEW
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:34:17-69
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:34:17-69
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:34:25-66
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:34:25-66
 category#android.intent.category.DEFAULT
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:35:17-76
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:35:17-76
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:35:27-73
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:35:27-73
 category#android.intent.category.BROWSABLE
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:36:17-78
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:36:17-78
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:36:27-75
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:36:27-75
 data
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:37:17-67
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:37:17-67
 	android:host
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:37:45-64
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:37:45-64
 	android:scheme
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:37:23-44
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:37:23-44
 service#com.example.inmocontrol_v2.hid.HidService
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:41:9-44:72
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:41:9-44:72
 	android:exported
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:43:13-37
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:43:13-37
 	android:foregroundServiceType
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:44:13-69
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:44:13-69
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:42:13-43
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:42:13-43
 receiver#com.example.inmocontrol_v2.boot.BootReceiver
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:46:9-50:20
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:46:9-50:20
 	android:exported
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:46:53-76
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:46:53-76
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:46:19-52
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:46:19-52
 intent-filter#action:name:android.intent.action.BOOT_COMPLETED
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:47:13-49:29
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:47:13-49:29
 action#android.intent.action.BOOT_COMPLETED
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:48:17-79
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:48:17-79
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:48:25-76
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:48:25-76
 service#com.example.inmocontrol_v2.tile.ModeTileService
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:52:9-62:19
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:52:9-62:19
 	android:label
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:55:13-45
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:55:13-45
 	android:exported
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:54:13-36
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:54:13-36
 	android:permission
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:56:13-91
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:56:13-91
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:53:13-49
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:53:13-49
 intent-filter#action:name:androidx.wear.tiles.action.BIND_TILE_PROVIDER
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:57:13-59:29
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:57:13-59:29
 action#androidx.wear.tiles.action.BIND_TILE_PROVIDER
-ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:58:17-88
+ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:58:17-88
 	android:name
-		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml:58:25-85
+		ADDED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:58:25-85
 uses-sdk
-INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
-INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml
-INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml
+INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml
+INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml
 MERGED from [androidx.wear.compose:compose-material-core:1.2.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\a3207f701973eb38625071e37b5946c5\transformed\compose-material-core-1.2.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.wear.compose:compose-material-core:1.2.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\a3207f701973eb38625071e37b5946c5\transformed\compose-material-core-1.2.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.wear.compose:compose-ui-tooling:1.2.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\7e42d29c604cd4436e64682231fa3c48\transformed\compose-ui-tooling-1.2.1\AndroidManifest.xml:5:5-44
@@ -381,9 +381,9 @@ MERGED from [androidx.tracing:tracing:1.0.0] D:\Users\duqhildr\.gradle\caches\8.
 MERGED from [com.inmo:inmo_arsdk:0.0.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\03544b3bf17469ae207781acbc8174f0\transformed\inmo_arsdk-0.0.1\AndroidManifest.xml:5:5-7:41
 MERGED from [com.inmo:inmo_arsdk:0.0.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\03544b3bf17469ae207781acbc8174f0\transformed\inmo_arsdk-0.0.1\AndroidManifest.xml:5:5-7:41
 	android:targetSdkVersion
-		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml
+		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml
 	android:minSdkVersion
-		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoControl_AndroidProject_v4\app\src\main\AndroidManifest.xml
+		INJECTED from D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml
 provider#androidx.startup.InitializationProvider
 ADDED from [androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:24:9-32:20
 MERGED from [androidx.lifecycle:lifecycle-process:2.6.2] D:\Users\duqhildr\.gradle\caches\8.13\transforms\d67868ff57a599130ac96602b3741dad\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:24:9-32:20

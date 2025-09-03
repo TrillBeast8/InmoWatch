@@ -19,6 +19,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
 import java.util.UUID
+import com.example.inmocontrol_v2.ui.screens.DeviceProfile
 
 class HidService : Service() {
     // Supported input modes
@@ -28,6 +29,9 @@ class HidService : Service() {
 
     // Current mode
     private var currentMode: InputMode = InputMode.MOUSE
+
+    // Current device profile (for platform-specific behavior)
+    var currentDeviceProfile: DeviceProfile? = null
 
     private val binder = LocalBinder()
     private var gattServer: BluetoothGattServer? = null
@@ -116,12 +120,13 @@ class HidService : Service() {
             BluetoothGattCharacteristic.PROPERTY_READ,
             BluetoothGattCharacteristic.PERMISSION_READ
         )
-        // Example report map for mouse and keyboard (update as needed for your use case)
+        // Enhanced report map that combines mouse, keyboard, and media controls (like Wear Mouse)
         val reportMap = byteArrayOf(
-            // Mouse report descriptor
+            // Mouse Collection
             0x05.toByte(), 0x01.toByte(), // Usage Page (Generic Desktop)
             0x09.toByte(), 0x02.toByte(), // Usage (Mouse)
             0xA1.toByte(), 0x01.toByte(), // Collection (Application)
+            0x85.toByte(), 0x01.toByte(), //   Report ID (1) - Mouse
             0x09.toByte(), 0x01.toByte(), //   Usage (Pointer)
             0xA1.toByte(), 0x00.toByte(), //   Collection (Physical)
             0x05.toByte(), 0x09.toByte(), //     Usage Page (Buttons)
@@ -143,9 +148,54 @@ class HidService : Service() {
             0x75.toByte(), 0x08.toByte(), //     Report Size (8)
             0x95.toByte(), 0x02.toByte(), //     Report Count (2)
             0x81.toByte(), 0x06.toByte(), //     Input (Data, Variable, Relative)
-            0xC0.toByte(),       //   End Collection
-            0xC0.toByte()        // End Collection
-            // Add keyboard descriptor if needed
+            0x09.toByte(), 0x38.toByte(), //     Usage (Wheel)
+            0x15.toByte(), 0x81.toByte(), //     Logical Minimum (-127)
+            0x25.toByte(), 0x7F.toByte(), //     Logical Maximum (127)
+            0x75.toByte(), 0x08.toByte(), //     Report Size (8)
+            0x95.toByte(), 0x01.toByte(), //     Report Count (1)
+            0x81.toByte(), 0x06.toByte(), //     Input (Data, Variable, Relative)
+            0xC0.toByte(),                //   End Collection
+            0xC0.toByte(),                // End Collection
+
+            // Keyboard Collection
+            0x05.toByte(), 0x01.toByte(), // Usage Page (Generic Desktop)
+            0x09.toByte(), 0x06.toByte(), // Usage (Keyboard)
+            0xA1.toByte(), 0x01.toByte(), // Collection (Application)
+            0x85.toByte(), 0x02.toByte(), //   Report ID (2) - Keyboard
+            0x05.toByte(), 0x07.toByte(), //   Usage Page (Key Codes)
+            0x19.toByte(), 0xE0.toByte(), //   Usage Minimum (224)
+            0x29.toByte(), 0xE7.toByte(), //   Usage Maximum (231)
+            0x15.toByte(), 0x00.toByte(), //   Logical Minimum (0)
+            0x25.toByte(), 0x01.toByte(), //   Logical Maximum (1)
+            0x75.toByte(), 0x01.toByte(), //   Report Size (1)
+            0x95.toByte(), 0x08.toByte(), //   Report Count (8)
+            0x81.toByte(), 0x02.toByte(), //   Input (Data, Variable, Absolute)
+            0x95.toByte(), 0x01.toByte(), //   Report Count (1)
+            0x75.toByte(), 0x08.toByte(), //   Report Size (8)
+            0x81.toByte(), 0x03.toByte(), //   Input (Constant, Variable, Absolute)
+            0x95.toByte(), 0x06.toByte(), //   Report Count (6)
+            0x75.toByte(), 0x08.toByte(), //   Report Size (8)
+            0x15.toByte(), 0x00.toByte(), //   Logical Minimum (0)
+            0x25.toByte(), 0xFF.toByte(), //   Logical Maximum (255)
+            0x05.toByte(), 0x07.toByte(), //   Usage Page (Key Codes)
+            0x19.toByte(), 0x00.toByte(), //   Usage Minimum (0)
+            0x29.toByte(), 0xFF.toByte(), //   Usage Maximum (255)
+            0x81.toByte(), 0x00.toByte(), //   Input (Data, Array)
+            0xC0.toByte(),                // End Collection
+
+            // Consumer Control (Media Keys)
+            0x05.toByte(), 0x0C.toByte(), // Usage Page (Consumer)
+            0x09.toByte(), 0x01.toByte(), // Usage (Consumer Control)
+            0xA1.toByte(), 0x01.toByte(), // Collection (Application)
+            0x85.toByte(), 0x03.toByte(), //   Report ID (3) - Media
+            0x15.toByte(), 0x00.toByte(), //   Logical Minimum (0)
+            0x26.toByte(), 0xFF.toByte(), 0x03.toByte(), // Logical Maximum (1023)
+            0x19.toByte(), 0x00.toByte(), //   Usage Minimum (0)
+            0x2A.toByte(), 0xFF.toByte(), 0x03.toByte(), // Usage Maximum (1023)
+            0x75.toByte(), 0x10.toByte(), //   Report Size (16)
+            0x95.toByte(), 0x01.toByte(), //   Report Count (1)
+            0x81.toByte(), 0x00.toByte(), //   Input (Data, Array)
+            0xC0.toByte()                 // End Collection
         )
         @Suppress("DEPRECATION")
         reportMapChar.setValue(reportMap)
@@ -280,18 +330,21 @@ class HidService : Service() {
         characteristic.setValue(value)
     }
 
-    // Mouse report: [buttons, x, y, wheel]
+    // Enhanced Mouse report with Report ID: [report_id, buttons, x, y, wheel]
     fun sendMouseReport(buttons: Byte, x: Byte, y: Byte, wheel: Byte = 0) {
         if (currentMode != InputMode.MOUSE && currentMode != InputMode.TOUCHPAD) {
             Log.d("HidService", "Ignoring mouse report: current mode is $currentMode")
             return
         }
-        val report = byteArrayOf(buttons, x, y, wheel)
+        // Report ID 1 for mouse reports
+        val report = byteArrayOf(0x01, buttons, x, y, wheel)
         connectedDevice?.let {
             setCharacteristicValue(reportCharacteristic, report)
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
                 @Suppress("DEPRECATION")
                 gattServer?.notifyCharacteristicChanged(it, reportCharacteristic, false)
+                packetsSent++
+                lastActivityTime = System.currentTimeMillis()
             } else {
                 Log.e("HidService", "BLUETOOTH_CONNECT permission not granted for notifyCharacteristicChanged")
             }
@@ -364,98 +417,147 @@ class HidService : Service() {
         }
     }
 
+    // Enhanced keyboard report with Report ID: [report_id, modifier, reserved, key1, key2, key3, key4, key5, key6]
     fun sendKeyboardReport(report: ByteArray) {
         if (currentMode == InputMode.KEYBOARD || currentMode == InputMode.DPAD) {
-            sendReport(report)
+            // Add Report ID 2 for keyboard reports
+            val keyboardReport = byteArrayOf(0x02) + report
+            connectedDevice?.let {
+                setCharacteristicValue(reportCharacteristic, keyboardReport)
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    @Suppress("DEPRECATION")
+                    gattServer?.notifyCharacteristicChanged(it, reportCharacteristic, false)
+                    packetsSent++
+                    lastActivityTime = System.currentTimeMillis()
+                }
+            }
         } else {
             Log.d("HidService", "Ignoring keyboard report: current mode is $currentMode")
         }
     }
 
-    // D-pad navigation (arrow keys)
+    // Enhanced media control functions with proper Report ID 3
+    private fun sendMediaReport(usage: Short) {
+        if (currentMode == InputMode.MEDIA) {
+            if (connectedDevice == null || gattServer == null) {
+                Log.e("HidService", "No connected device or GATT server for media control")
+                return
+            }
+
+            // Report ID 3 for media controls, followed by 2-byte usage code (little-endian)
+            val report = byteArrayOf(0x03, (usage.toInt() and 0xFF).toByte(), ((usage.toInt() shr 8) and 0xFF).toByte())
+
+            connectedDevice?.let {
+                setCharacteristicValue(reportCharacteristic, report)
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    @Suppress("DEPRECATION")
+                    gattServer?.notifyCharacteristicChanged(it, reportCharacteristic, false)
+                    packetsSent++
+                    lastActivityTime = System.currentTimeMillis()
+                }
+            }
+
+            // Send release (0x0000)
+            val releaseReport = byteArrayOf(0x03, 0x00, 0x00)
+            connectedDevice?.let {
+                setCharacteristicValue(reportCharacteristic, releaseReport)
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    @Suppress("DEPRECATION")
+                    gattServer?.notifyCharacteristicChanged(it, reportCharacteristic, false)
+                }
+            }
+        } else {
+            Log.d("HidService", "Ignoring media control: current mode is $currentMode")
+        }
+    }
+
+    // D-pad navigation (arrow keys and combinations)
     fun dpad(direction: Int) {
         if (currentMode == InputMode.DPAD) {
-            // direction: 0=up, 1=down, 2=left, 3=right
-            val keyCode = when (direction) {
-                0 -> 0x52 // Up Arrow
-                1 -> 0x51 // Down Arrow
-                2 -> 0x50 // Left Arrow
-                3 -> 0x4F // Right Arrow
-                else -> 0x00
+            // direction: 0=up, 1=down, 2=left, 3=right, 4=upleft, 5=upright, 6=downleft, 7=downright, 8=ok/enter
+            when (direction) {
+                0 -> { // Up
+                    val keyCode = 0x52 // Up Arrow
+                    val report = byteArrayOf(0x00, 0x00, keyCode.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00)
+                    sendKeyboardReport(report)
+                    sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                }
+                1 -> { // Down
+                    val keyCode = 0x51 // Down Arrow
+                    val report = byteArrayOf(0x00, 0x00, keyCode.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00)
+                    sendKeyboardReport(report)
+                    sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                }
+                2 -> { // Left
+                    val keyCode = 0x50 // Left Arrow
+                    val report = byteArrayOf(0x00, 0x00, keyCode.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00)
+                    sendKeyboardReport(report)
+                    sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                }
+                3 -> { // Right
+                    val keyCode = 0x4F // Right Arrow
+                    val report = byteArrayOf(0x00, 0x00, keyCode.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00)
+                    sendKeyboardReport(report)
+                    sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                }
+                4 -> { // Up-Left (send both keys)
+                    val report = byteArrayOf(0x00, 0x00, 0x52.toByte(), 0x50.toByte(), 0x00, 0x00, 0x00, 0x00)
+                    sendKeyboardReport(report)
+                    sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                }
+                5 -> { // Up-Right (send both keys)
+                    val report = byteArrayOf(0x00, 0x00, 0x52.toByte(), 0x4F.toByte(), 0x00, 0x00, 0x00, 0x00)
+                    sendKeyboardReport(report)
+                    sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                }
+                6 -> { // Down-Left (send both keys)
+                    val report = byteArrayOf(0x00, 0x00, 0x51.toByte(), 0x50.toByte(), 0x00, 0x00, 0x00, 0x00)
+                    sendKeyboardReport(report)
+                    sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                }
+                7 -> { // Down-Right (send both keys)
+                    val report = byteArrayOf(0x00, 0x00, 0x51.toByte(), 0x4F.toByte(), 0x00, 0x00, 0x00, 0x00)
+                    sendKeyboardReport(report)
+                    sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                }
+                8 -> { // OK/Enter
+                    val keyCode = when (currentDeviceProfile) {
+                        is DeviceProfile.InmoAir2 -> 0x28 // Enter key for Inmo Air 2
+                        is DeviceProfile.GenericHid -> 0x28 // Enter key for generic HID devices
+                        else -> 0x28 // Default to Enter key
+                    }
+                    val report = byteArrayOf(0x00, 0x00, keyCode.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00)
+                    sendKeyboardReport(report)
+                    sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                }
             }
-            val report = byteArrayOf(0x00, 0x00, keyCode.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00)
-            sendKeyboardReport(report)
-            // Release key
-            sendKeyboardReport(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
         } else {
             Log.d("HidService", "Ignoring dpad: current mode is $currentMode")
         }
     }
 
-    // Volume control
+    // Updated Volume control using proper consumer codes
     fun setVolume(volume: Int) {
-        if (currentMode == InputMode.MEDIA) {
-            if (connectedDevice == null || gattServer == null) {
-                Log.e("HidService", "No connected device or GATT server for setVolume")
-                return
-            }
-            // volume: 1=up, -1=down
-            val usage = when (volume) {
-                1 -> 0xE9 // Volume Up
-                -1 -> 0xEA // Volume Down
-                else -> 0x00
-            }
-            if (usage != 0x00) {
-                val report = byteArrayOf(usage.toByte(), 0x00)
-                sendReport(report)
-                // Release key
-                sendReport(byteArrayOf(0x00, 0x00))
-            }
-        } else {
-            Log.d("HidService", "Ignoring setVolume: current mode is $currentMode")
+        when (volume) {
+            1 -> sendMediaReport(0x00E9) // Volume Up
+            -1 -> sendMediaReport(0x00EA) // Volume Down
+            else -> Log.d("HidService", "Invalid volume value: $volume")
         }
     }
 
-    // Media controls
+    // Updated Media controls using proper consumer codes
     fun playPause() {
-        if (currentMode == InputMode.MEDIA) {
-            if (connectedDevice == null || gattServer == null) {
-                Log.e("HidService", "No connected device or GATT server for playPause")
-                return
-            }
-            val report = byteArrayOf(0xCD.toByte(), 0x00) // Play/Pause
-            sendReport(report)
-            sendReport(byteArrayOf(0x00, 0x00))
-        } else {
-            Log.d("HidService", "Ignoring playPause: current mode is $currentMode")
-        }
+        sendMediaReport(0x00CD) // Play/Pause
     }
+
     fun previousTrack() {
-        if (currentMode == InputMode.MEDIA) {
-            if (connectedDevice == null || gattServer == null) {
-                Log.e("HidService", "No connected device or GATT server for previousTrack")
-                return
-            }
-            val report = byteArrayOf(0xB6.toByte(), 0x00) // Previous Track
-            sendReport(report)
-            sendReport(byteArrayOf(0x00, 0x00))
-        } else {
-            Log.d("HidService", "Ignoring previousTrack: current mode is $currentMode")
-        }
+        sendMediaReport(0x00B6) // Previous Track
     }
+
     fun nextTrack() {
-        if (currentMode == InputMode.MEDIA) {
-            if (connectedDevice == null || gattServer == null) {
-                Log.e("HidService", "No connected device or GATT server for nextTrack")
-                return
-            }
-            val report = byteArrayOf(0xB5.toByte(), 0x00) // Next Track
-            sendReport(report)
-            sendReport(byteArrayOf(0x00, 0x00))
-        } else {
-            Log.d("HidService", "Ignoring nextTrack: current mode is $currentMode")
-        }
+        sendMediaReport(0x00B5) // Next Track
     }
+
     fun switchOutput(output: Int) {
         if (currentMode == InputMode.MEDIA) {
             if (connectedDevice == null || gattServer == null) {
@@ -499,45 +601,67 @@ class HidService : Service() {
     fun connect(device: BluetoothDevice) {
         connectedDevice = device
         Log.d("HidService", "Connected to device: $device")
-        // Add any additional connection logic here if needed
     }
 
+    // Connection stability monitoring functions (referenced but missing)
     private fun startConnectionMonitoring() {
+        connectionMonitorJob?.cancel()
         connectionMonitorJob = serviceScope.launch {
-            while (isActive) {
+            while (isActive && connectedDevice != null) {
                 delay(stabilityCheckIntervalMs)
 
-                if (connectedDevice == null) {
-                    // If disconnected, attempt to reconnect
-                    startSmartReconnection() // Or appropriate status
-                    continue // Skip the rest of the loop until reconnected
+                val timeSinceLastActivity = System.currentTimeMillis() - lastActivityTime
+
+                // Mark connection as stable after 10 seconds of successful activity
+                if (!isStableConnection && timeSinceLastActivity < connectionTimeoutMs &&
+                    System.currentTimeMillis() - connectionStartTime > 10000) {
+                    isStableConnection = true
+                    Log.d("HidService", "Connection marked as stable")
                 }
 
-                // Check connection stability only if connected
-                val currentTime = System.currentTimeMillis()
-                if (currentTime - lastActivityTime > connectionTimeoutMs) {
-                    // Connection is unstable, attempt to reconnect
-                    Log.w("HidService", "Connection unstable, attempting to reconnect")
-                    if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                        sendReconnectStatusBroadcast("unstable", 0, connectedDevice?.name)
+                // Check for connection timeout
+                if (timeSinceLastActivity > connectionTimeoutMs) {
+                    Log.w("HidService", "Connection timeout detected, connection may be unstable")
+                    isStableConnection = false
+
+                    // If connection seems dead, trigger reconnection
+                    if (timeSinceLastActivity > connectionTimeoutMs * 2) {
+                        Log.e("HidService", "Connection appears dead, triggering reconnection")
+                        startSmartReconnection()
                     }
-                    startSmartReconnection() // Indicate failure
-                } else {
-                    // Connection is stable
-                    isStableConnection = true
                 }
             }
         }
     }
 
     private fun startAdaptiveHeartbeat() {
+        heartbeatJob?.cancel()
         heartbeatJob = serviceScope.launch {
-            while (connectedDevice != null) {
+            while (isActive && connectedDevice != null) {
                 delay(heartbeatIntervalMs)
-                // Send a heartbeat signal (can be a dummy report or actual data)
+
+                // Send a lightweight heartbeat to maintain connection
+                sendHeartbeat()
+            }
+        }
+    }
+
+    private fun sendHeartbeat() {
+        connectedDevice?.let { device ->
+            try {
+                // Send a minimal report to keep connection alive
                 val heartbeatReport = byteArrayOf(0x00, 0x00, 0x00, 0x00)
-                sendReport(heartbeatReport)
-                Log.d("HidService", "Adaptive heartbeat sent")
+                setCharacteristicValue(reportCharacteristic, heartbeatReport)
+
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    @Suppress("DEPRECATION")
+                    gattServer?.notifyCharacteristicChanged(device, reportCharacteristic, false)
+                    packetsSent++
+                } else {
+                    Log.w("HidService", "BLUETOOTH_CONNECT permission not granted for heartbeat")
+                }
+            } catch (e: Exception) {
+                Log.w("HidService", "Heartbeat failed: ${e.message}")
             }
         }
     }
@@ -547,44 +671,73 @@ class HidService : Service() {
             Log.d("HidService", "Reconnection already in progress")
             return
         }
-        reconnectJob = serviceScope.launch {
-            var attempt = 0
-            var success = false
-            while (attempt < maxReconnectAttempts && !success && isActive) {
-                Log.d("HidService", "Smart reconnect attempt "+(attempt+1))
-                // Broadcast attempt
-                sendReconnectStatusBroadcast("attempt", attempt+1, lastConnectedDevice?.name)
-                try {
-                    if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                        reconnectGatt?.close()
-                        reconnectGattCallback = object : BluetoothGattCallback() {
-                            override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-                                if (newState == BluetoothProfile.STATE_CONNECTED) {
-                                    connectedDevice = gatt.device
-                                    success = true
-                                    Log.d("HidService", "Reconnected successfully (smart)")
-                                    if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                                        sendReconnectStatusBroadcast("success", attempt+1, gatt.device.name)
-                                    } else {
-                                        Log.e("HidService", "BLUETOOTH_CONNECT permission not granted for sendReconnectStatusBroadcast")
+
+        lastConnectedDevice?.let { device ->
+            reconnectJob = serviceScope.launch {
+                var attempt = 1
+
+                while (attempt <= maxReconnectAttempts && isActive) {
+                    Log.d("HidService", "Reconnection attempt $attempt/$maxReconnectAttempts to ${device.name}")
+                    sendReconnectStatusBroadcast("RECONNECTING", attempt, device.name)
+
+                    try {
+                        if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                            // Create GATT client connection for reconnection
+                            reconnectGattCallback = object : BluetoothGattCallback() {
+                                override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
+                                    when (newState) {
+                                        BluetoothProfile.STATE_CONNECTED -> {
+                                            Log.d("HidService", "Reconnection successful!")
+                                            connectedDevice = device
+                                            sendReconnectStatusBroadcast("CONNECTED", attempt, device.name)
+                                            gatt?.disconnect()
+                                            startConnectionMonitoring()
+                                            startAdaptiveHeartbeat()
+                                        }
+                                        BluetoothProfile.STATE_DISCONNECTED -> {
+                                            gatt?.close()
+                                        }
                                     }
-                                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                                    Log.d("HidService", "Reconnect client disconnected (smart)")
                                 }
                             }
+
+                            reconnectGatt = device.connectGatt(this@HidService, false, reconnectGattCallback)
+
+                            // Wait for connection result
+                            delay(5000)
+
+                            if (connectedDevice != null) {
+                                Log.d("HidService", "Reconnection successful after $attempt attempts")
+                                sendReconnectStatusBroadcast("SUCCESS", attempt, device.name)
+                                return@launch
+                            }
                         }
-                        reconnectGatt = lastConnectedDevice?.connectGatt(this@HidService, false, reconnectGattCallback!!)
-                        delay(reconnectDelayMillis)
+                    } catch (e: Exception) {
+                        Log.w("HidService", "Reconnection attempt $attempt failed: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    Log.e("HidService", "Reconnect error (smart): ${e.message}")
+
+                    attempt++
+                    if (attempt <= maxReconnectAttempts) {
+                        delay(reconnectDelayMillis * attempt) // Exponential backoff
+                    }
                 }
-                attempt++
+
+                Log.e("HidService", "All reconnection attempts failed")
+                sendReconnectStatusBroadcast("FAILED", maxReconnectAttempts, device.name)
             }
-            if (!success) {
-                Log.e("HidService", "Failed to reconnect after $maxReconnectAttempts attempts (smart)")
-                sendReconnectStatusBroadcast("failure", attempt, lastConnectedDevice?.name)
-            }
+        }
+    }
+
+    // Get connection status for UI
+    fun isDeviceConnected(): Boolean = connectedDevice != null
+    fun getConnectedDevice(): BluetoothDevice? = connectedDevice
+    fun getCurrentMode(): InputMode = currentMode
+    fun isConnectionStable(): Boolean = isStableConnection
+    fun getConnectionQuality(): Float {
+        return if (packetsSent > 0) {
+            packetsAcknowledged.toFloat() / packetsSent.toFloat()
+        } else {
+            0f
         }
     }
 }

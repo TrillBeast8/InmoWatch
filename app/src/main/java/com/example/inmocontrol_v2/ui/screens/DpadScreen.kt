@@ -19,6 +19,12 @@ import com.example.inmocontrol_v2.hid.HidClient
 @Composable
 fun DpadScreen() {
     val ctx = LocalContext.current
+
+    // Set input mode to DPAD when screen loads
+    LaunchedEffect(Unit) {
+        HidClient.instance()?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.DPAD)
+    }
+
     androidx.wear.compose.material.Scaffold {
         TimeText()
         Column(

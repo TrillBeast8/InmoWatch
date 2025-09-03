@@ -6,6 +6,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+// Add the missing ConnectionState sealed class
+sealed class ConnectionState {
+    object Idle : ConnectionState()
+    object Searching : ConnectionState()
+    object Connecting : ConnectionState()
+    data class Connected(val deviceName: String) : ConnectionState()
+    data class Error(val message: String) : ConnectionState()
+}
+
 class ConnectionStateViewModel : ViewModel() {
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Idle)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
