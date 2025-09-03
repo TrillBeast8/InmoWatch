@@ -16,7 +16,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        jcenter()
         maven { url = uri("https://jitpack.io") }
         //add inmosdk repositories
         maven { url = uri("https://gitee.com/inmolens/inmo-ar-sdk/raw/master") }
