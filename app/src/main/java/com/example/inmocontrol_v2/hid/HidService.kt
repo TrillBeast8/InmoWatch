@@ -599,8 +599,52 @@ class HidService : Service() {
 
     // Public method to connect to a Bluetooth device
     fun connect(device: BluetoothDevice) {
-        connectedDevice = device
-        Log.d("HidService", "Connected to device: $device")
+        Log.d("HidService", "Attempting to connect to device: ${device.name} (${device.address})")
+        
+        try {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                // Establish actual GATT connection
+                val gattCallback = object : BluetoothGattCallback() {
+                    override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
+                        when (newState) {
+                            BluetoothProfile.STATE_CONNECTED -> {
+                                Log.d("HidService", "GATT Connected successfully to ${device.name}")
+                                connectedDevice = device
+                                lastConnectedDevice = device
+                                connectionStartTime = System.currentTimeMillis()
+                                lastActivityTime = System.currentTimeMillis()
+                                isStableConnection = false
+                                
+                                // Start connection monitoring
+                                startConnectionMonitoring()
+                                startAdaptiveHeartbeat()
+                                
+                                // Close the GATT connection since we're using GATT server mode
+                                gatt?.disconnect()
+                            }
+                            BluetoothProfile.STATE_DISCONNECTED -> {
+                                Log.d("HidService", "GATT Disconnected from ${device.name}")
+                                gatt?.close()
+                            }
+                        }
+                    }
+                    
+                    override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+                        if (status == BluetoothGatt.GATT_SUCCESS) {
+                            Log.d("HidService", "Services discovered for ${device.name}")
+                        }
+                    }
+                }
+                
+                // Connect to the device via GATT
+                device.connectGatt(this, false, gattCallback)
+                
+            } else {
+                Log.e("HidService", "BLUETOOTH_CONNECT permission not granted for connection")
+            }
+        } catch (e: Exception) {
+            Log.e("HidService", "Failed to connect to device: ${e.message}")
+        }
     }
 
     // Connection stability monitoring functions (referenced but missing)

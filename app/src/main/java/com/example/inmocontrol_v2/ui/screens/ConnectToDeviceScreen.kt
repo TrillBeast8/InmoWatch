@@ -1,6 +1,7 @@
 package com.example.inmocontrol_v2.ui.screens
 
 import android.Manifest
+import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanCallback
@@ -262,13 +263,28 @@ fun ConnectToDeviceScreen(
                                 hidService?.connect(savedDevice)
                                 HidClient.currentDeviceProfile = identifyDeviceProfile(deviceName)
 
-                                delay(3000) // Wait for connection
-                                state = ConnectionState.Connected(deviceName)
-                                connectionStateViewModel.setConnected()
-
-                                // Auto-navigate to main menu after successful reconnection
-                                delay(1000)
-                                onOpenControls()
+                                // Wait for actual connection with timeout (similar to manual connection)
+                                var connectionAttempts = 0
+                                val maxAttempts = 10
+                                var isConnected = false
+                                
+                                while (connectionAttempts < maxAttempts && !isConnected) {
+                                    delay(500)
+                                    isConnected = hidService?.isDeviceConnected() == true
+                                    connectionAttempts++
+                                }
+                                
+                                if (isConnected) {
+                                    state = ConnectionState.Connected(deviceName)
+                                    connectionStateViewModel.setConnected()
+                                    
+                                    // Auto-navigate to main menu after successful reconnection
+                                    delay(1000)
+                                    onOpenControls()
+                                } else {
+                                    // Auto-reconnect failed, user will need to manually connect
+                                    state = ConnectionState.Idle
+                                }
                             }
                         } catch (e: Exception) {
                             // Auto-reconnect failed, user will need to manually connect
@@ -401,9 +417,18 @@ fun ConnectToDeviceScreen(
         deviceProfileMap = emptyMap()
         state = ConnectionState.Searching
 
-        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+        if (bluetoothAdapter == null) {
+            scanDebugInfo = "Bluetooth not available"
+            state = ConnectionState.Error("Bluetooth is not available on this device")
+            return
+        }
+
+        if (!bluetoothAdapter.isEnabled) {
             scanDebugInfo = "Bluetooth not enabled"
-            state = ConnectionState.Error("Bluetooth is not enabled")
+            // Instead of showing error, request Bluetooth enable
+            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            bluetoothEnableLauncher.launch(enableBtIntent)
+            state = ConnectionState.Error("Please enable Bluetooth to scan for devices")
             return
         }
 
@@ -540,6 +565,22 @@ fun ConnectToDeviceScreen(
         }
     }
 
+    // Bluetooth enable request launcher
+    val bluetoothEnableLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // Bluetooth was enabled, proceed with scan if it was requested
+            if (scanRequested) {
+                startScanning()
+                scanRequested = false
+            }
+        } else {
+            // User denied Bluetooth enable request
+            state = ConnectionState.Error("Bluetooth is required to connect to devices")
+        }
+    }
+
     LaunchedEffect(allGranted, permissionsRequested, scanRequested) {
         if (!allGranted && !permissionsRequested && context is android.app.Activity) {
             permissionsRequested = true
@@ -636,16 +677,37 @@ fun ConnectToDeviceScreen(
                                     modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
-                                Button(
-                                    onClick = {
-                                        scanRequested = true
-                                        startScanning()
-                                    },
-                                    modifier = Modifier
-                                        .widthIn(max = 120.dp)
-                                        .padding(vertical = 8.dp)
-                                ) {
-                                    WearText("Retry")
+                                
+                                if (errorState.message.contains("enable Bluetooth", ignoreCase = true)) {
+                                    // Special handling for Bluetooth enable errors
+                                    Button(
+                                        onClick = {
+                                            if (bluetoothAdapter?.isEnabled == true) {
+                                                scanRequested = true
+                                                startScanning()
+                                            } else {
+                                                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                                                bluetoothEnableLauncher.launch(enableBtIntent)
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .widthIn(max = 140.dp)
+                                            .padding(vertical = 8.dp)
+                                    ) {
+                                        WearText("Enable Bluetooth")
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = {
+                                            scanRequested = true
+                                            startScanning()
+                                        },
+                                        modifier = Modifier
+                                            .widthIn(max = 120.dp)
+                                            .padding(vertical = 8.dp)
+                                    ) {
+                                        WearText("Retry")
+                                    }
                                 }
                             }
                         }
@@ -701,14 +763,27 @@ fun ConnectToDeviceScreen(
                                         // Save device for auto-reconnect
                                         settingsStore.setLastConnectedDevice(name, device.address)
 
-                                        // Wait a bit for connection to establish
-                                        delay(2000)
-                                        state = ConnectionState.Connected(name)
-                                        connectionStateViewModel.setConnected()
-
-                                        // Auto-navigate to main menu after successful connection
-                                        delay(1000)
-                                        onOpenControls()
+                                        // Wait for actual connection to establish with timeout
+                                        var connectionAttempts = 0
+                                        val maxAttempts = 10 // 5 seconds total wait time
+                                        var isConnected = false
+                                        
+                                        while (connectionAttempts < maxAttempts && !isConnected) {
+                                            delay(500) // Check every 500ms
+                                            isConnected = hidService?.isDeviceConnected() == true
+                                            connectionAttempts++
+                                        }
+                                        
+                                        if (isConnected) {
+                                            state = ConnectionState.Connected(name)
+                                            connectionStateViewModel.setConnected()
+                                            
+                                            // Auto-navigate to main menu after successful connection
+                                            delay(1000)
+                                            onOpenControls()
+                                        } else {
+                                            state = ConnectionState.Error("Connection timeout: Could not establish connection to $name")
+                                        }
                                     } catch (e: Exception) {
                                         state = ConnectionState.Error("Connection failed: ${e.message}")
                                     }

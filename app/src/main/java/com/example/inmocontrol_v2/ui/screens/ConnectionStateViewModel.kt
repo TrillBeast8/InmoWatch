@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.*
 
 // Add the missing ConnectionState sealed class
 sealed class ConnectionState {
@@ -28,6 +29,10 @@ class ConnectionStateViewModel : ViewModel() {
 
     private val _pairedDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
     val pairedDevices: StateFlow<List<BluetoothDevice>> = _pairedDevices.asStateFlow()
+    
+    // Add connection timeout handling
+    private val viewModelScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var connectionTimeoutJob: Job? = null
 
     fun updateConnectionState(state: ConnectionState) {
         _connectionState.value = state
@@ -55,10 +60,37 @@ class ConnectionStateViewModel : ViewModel() {
 
     // Add missing connection state methods
     fun setConnected() {
+        connectionTimeoutJob?.cancel()
         _connectionState.value = ConnectionState.Connected("Connected Device")
+    }
+    
+    fun setConnecting(timeoutMs: Long = 10000L) {
+        _connectionState.value = ConnectionState.Connecting
+        
+        // Start timeout timer
+        connectionTimeoutJob?.cancel()
+        connectionTimeoutJob = viewModelScope.launch {
+            delay(timeoutMs)
+            if (_connectionState.value is ConnectionState.Connecting) {
+                _connectionState.value = ConnectionState.Error("Connection timeout")
+            }
+        }
     }
 
     fun setDisconnected() {
+        connectionTimeoutJob?.cancel()
         _connectionState.value = ConnectionState.Idle
     }
+    
+    fun setError(message: String) {
+        connectionTimeoutJob?.cancel()
+        _connectionState.value = ConnectionState.Error(message)
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        connectionTimeoutJob?.cancel()
+        viewModelScope.cancel()
+    }
+}
 }
