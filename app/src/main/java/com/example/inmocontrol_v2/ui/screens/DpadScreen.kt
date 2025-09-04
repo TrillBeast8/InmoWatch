@@ -18,13 +18,6 @@ import com.example.inmocontrol_v2.hid.HidClient
 
 @Composable
 fun DpadScreen() {
-    val ctx = LocalContext.current
-
-    // Set input mode to DPAD when screen loads
-    LaunchedEffect(Unit) {
-        HidClient.instance()?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.DPAD)
-    }
-
     androidx.wear.compose.material.Scaffold {
         TimeText()
         Column(
@@ -48,41 +41,30 @@ fun DpadScreen() {
                 DpadWearButton("▶", "right", Modifier.align(Alignment.CenterEnd).size(40.dp))
                 DpadWearButton("↖", "upleft", Modifier.align(Alignment.TopStart).size(32.dp))
                 DpadWearButton("↗", "upright", Modifier.align(Alignment.TopEnd).size(32.dp))
-                DpadWearButton("↙", "downleft", Modifier.align(Alignment.BottomStart).size(32.dp))
                 DpadWearButton("↘", "downright", Modifier.align(Alignment.BottomEnd).size(32.dp))
             }
         }
     }
 }
 
-fun directionToInt(direction: String): Int = when (direction) {
-    "up" -> 0
-    "down" -> 1
-    "left" -> 2
-    "right" -> 3
-    "upleft" -> 4
-    "upright" -> 5
-    "downleft" -> 6
-    "downright" -> 7
-    "ok" -> 8
-    else -> 8
-}
-
 @Composable
 private fun DpadWearButton(label: String, direction: String, modifier: Modifier = Modifier) {
     var isPressed by remember { mutableStateOf(false) }
-    val backgroundColor = if (isPressed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-    val contentColor = if (isPressed) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val backgroundColor = if (isPressed) androidx.wear.compose.material.MaterialTheme.colors.primary else androidx.wear.compose.material.MaterialTheme.colors.surface
+    val contentColor = if (isPressed) androidx.wear.compose.material.MaterialTheme.colors.onPrimary else androidx.wear.compose.material.MaterialTheme.colors.onSurface
+
     WearButton(
         onClick = {
-            try {
-                HidClient.instance()?.dpad(directionToInt(direction))
-            } catch (e: Exception) {
-                // Optionally show error feedback
+            when (direction) {
+                "up" -> HidClient.dpad(0)
+                "down" -> HidClient.dpad(1)
+                "left" -> HidClient.dpad(2)
+                "right" -> HidClient.dpad(3)
+                "ok" -> HidClient.dpad(8)
+                else -> {}
             }
         },
         modifier = modifier
-            .size(28.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
@@ -101,7 +83,7 @@ private fun DpadWearButton(label: String, direction: String, modifier: Modifier 
     }
 }
 
-@Preview(showBackground = true, device = "id:wearos_small_round")
+@Preview(device = "id:wearos_small_round", showSystemUi = true)
 @Composable
 fun DpadScreenPreview() {
     DpadScreen()

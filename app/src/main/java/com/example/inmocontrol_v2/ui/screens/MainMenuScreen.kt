@@ -21,20 +21,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun MainMenuScreen(onNavigate: (String) -> Unit = {}) {
     val connectionStateViewModel: ConnectionStateViewModel = viewModel()
-    val isConnected = connectionStateViewModel.isConnected
-    // Auto-launch connect screen if not connected
-    androidx.compose.runtime.LaunchedEffect(isConnected) {
-        if (!isConnected) {
-            onNavigate("connect")
-        }
-    }
+
+    // FIXED: Remove auto-navigation logic that causes infinite loops
+    // Don't automatically navigate to connect screen from main menu
+    // This should be handled by the parent navigation logic in MainActivity
+
     val menuItems = listOf(
         "Mouse" to "mouse",
         "Keyboard" to "keyboard",
         "Touchpad" to "touchpad",
         "D-Pad" to "dpad",
         "Media" to "media",
-        "Settings" to "settings"
+        "Settings" to "settings",
+        "Connect Device" to "connect_device"  // Add explicit connection option
     )
     val scalingLazyListState = remember { ScalingLazyListState() }
     androidx.wear.compose.material.Scaffold {

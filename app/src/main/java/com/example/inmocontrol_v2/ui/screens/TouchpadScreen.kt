@@ -99,112 +99,101 @@ fun TouchpadScreen() {
                                 val event = awaitPointerEvent()
                                 val changes = event.changes
 
-                                // Detect if we have two fingers
-                                if (changes.size >= 2 && !isMultiTouch) {
-                                    isMultiTouch = true
-                                    coroutineScope.launch {
-                                        lastAction.value = "Two-finger mode"
-                                        actionFeedbackVisible.value = true
-                                    }
-                                }
+                                // Check for multi-touch (two-finger scrolling)
+                                isMultiTouch = changes.size >= 2
 
-                                if (isMultiTouch && changes.size >= 2) {
+                                if (isMultiTouch) {
                                     // Two-finger scrolling
-                                    val change1 = changes[0]
-                                    val change2 = changes[1]
+                                    if (changes.size >= 2) {
+                                        val change1 = changes[0]
+                                        val change2 = changes[1]
 
-                                    // Calculate average movement of both fingers
-                                    val avgDragAmount = Offset(
-                                        (change1.position.x - change1.previousPosition.x +
-                                         change2.position.x - change2.previousPosition.x) / 2f,
-                                        (change1.position.y - change1.previousPosition.y +
-                                         change2.position.y - change2.previousPosition.y) / 2f
-                                    )
+                                        if (change1.pressed && change2.pressed) {
+                                            val avgDelta = Offset(
+                                                (change1.position.x - change1.previousPosition.x +
+                                                 change2.position.x - change2.previousPosition.x) / 2f,
+                                                (change1.position.y - change1.previousPosition.y +
+                                                 change2.position.y - change2.previousPosition.y) / 2f
+                                            )
 
-                                    if (abs(avgDragAmount.x) > 5f || abs(avgDragAmount.y) > 5f) {
-                                        coroutineScope.launch {
-                                            if (abs(avgDragAmount.y) > abs(avgDragAmount.x)) {
-                                                // Vertical scroll - up/down
-                                                val scaledY = (avgDragAmount.y * scrollSensitivity * 2).toInt()
-                                                val direction = if (scaledY < 0) "2F Scroll ↑" else "2F Scroll ↓"
-                                                lastAction.value = direction
-                                                actionFeedbackVisible.value = true
-                                                try {
-                                                    HidClient.instance()?.mouseScroll(0, scaledY)
-                                                } catch (e: Exception) {}
-                                            } else {
-                                                // Horizontal scroll - left/right
-                                                val scaledX = (avgDragAmount.x * scrollSensitivity * 2).toInt()
-                                                val direction = if (scaledX < 0) "2F Scroll ←" else "2F Scroll →"
-                                                lastAction.value = direction
-                                                actionFeedbackVisible.value = true
-                                                try {
-                                                    HidClient.instance()?.mouseScroll(scaledX, 0)
-                                                } catch (e: Exception) {}
+                                            if (abs(avgDelta.x) > 10 || abs(avgDelta.y) > 10) {
+                                                coroutineScope.launch {
+                                                    lastAction.value = "Scrolling"
+                                                    actionFeedbackVisible.value = true
+                                                    try {
+                                                        HidClient.mouseScroll(
+                                                            (avgDelta.x * scrollSensitivity).toInt(),
+                                                            (avgDelta.y * scrollSensitivity).toInt()
+                                                        )
+                                                    } catch (e: Exception) {}
+                                                }
                                             }
                                         }
+                                        change1.consume()
+                                        change2.consume()
                                     }
-
-                                    change1.consume()
-                                    change2.consume()
-                                } else if (!isMultiTouch && changes.size == 1) {
-                                    // Single finger - handle mouse movement and taps
+                                } else if (changes.size == 1) {
+                                    // Single finger - mouse movement or drag
                                     val change = changes[0]
 
-                                    if (!dragStarted && change.pressed) {
-                                        val dragAmount = change.position - change.previousPosition
-                                        if (abs(dragAmount.x) > 10f || abs(dragAmount.y) > 10f) {
-                                            dragStarted = true
+                                    if (change.pressed) {
+                                        if (!dragStarted) {
+                                            // Start drag
                                             isDragging.value = true
+                                            dragStarted = true
                                             coroutineScope.launch {
-                                                lastAction.value = "Moving..."
-                                                actionFeedbackVisible.value = true
                                                 try {
-                                                    HidClient.instance()?.moveMouse(dragAmount.x.toInt(), dragAmount.y.toInt())
+                                                    HidClient.mouseDragMove(0, 0) // Start drag mode
                                                 } catch (e: Exception) {}
                                             }
                                         }
-                                    } else if (dragStarted && change.pressed) {
-                                        val dragAmount = change.position - change.previousPosition
-                                        coroutineScope.launch {
-                                            try {
-                                                HidClient.instance()?.moveMouse(dragAmount.x.toInt(), dragAmount.y.toInt())
-                                            } catch (e: Exception) {}
+
+                                        // Continue drag movement
+                                        val deltaX = change.position.x - change.previousPosition.x
+                                        val deltaY = change.position.y - change.previousPosition.y
+
+                                        if (abs(deltaX) > 5 || abs(deltaY) > 5) {
+                                            coroutineScope.launch {
+                                                lastAction.value = "Dragging"
+                                                actionFeedbackVisible.value = true
+                                                try {
+                                                    HidClient.mouseDragMove(deltaX.toInt(), deltaY.toInt())
+                                                } catch (e: Exception) {}
+                                            }
                                         }
+                                        change.consume()
                                     }
-
-                                    change.consume()
                                 }
-
                             } while (changes.any { it.pressed })
 
-                            // Handle end of gesture
+                            // End drag when all pointers are released
                             if (dragStarted) {
                                 isDragging.value = false
-                                try {
-                                    HidClient.instance()?.mouseDragEnd()
-                                } catch (e: Exception) {}
-                            } else if (!isMultiTouch) {
-                                // This was a simple tap
                                 coroutineScope.launch {
-                                    lastAction.value = "Left Click"
-                                    actionFeedbackVisible.value = true
                                     try {
-                                        HidClient.instance()?.mouseLeftClick()
+                                        HidClient.mouseDragEnd()
                                     } catch (e: Exception) {}
                                 }
                             }
                         }
                     }
                     .pointerInput(Unit) {
-                        // Handle long press for right click and double tap
                         detectTapGestures(
+                            onTap = {
+                                coroutineScope.launch {
+                                    lastAction.value = "Left Click"
+                                    actionFeedbackVisible.value = true
+                                    try {
+                                        HidClient.mouseLeftClick()
+                                    } catch (e: Exception) {}
+                                }
+                            },
                             onLongPress = {
                                 coroutineScope.launch {
                                     lastAction.value = "Right Click"
                                     actionFeedbackVisible.value = true
                                     try {
-                                        HidClient.instance()?.mouseRightClick()
+                                        HidClient.mouseRightClick()
                                     } catch (e: Exception) {}
                                 }
                             },
@@ -213,14 +202,14 @@ fun TouchpadScreen() {
                                     lastAction.value = "Double Click"
                                     actionFeedbackVisible.value = true
                                     try {
-                                        HidClient.instance()?.mouseDoubleClick()
+                                        HidClient.mouseDoubleClick()
                                     } catch (e: Exception) {}
                                 }
                             }
                         )
                     }
             ) {
-                // Visual feedback ring around the touchpad
+                // Visual feedback for the touchpad area
                 Canvas(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -229,24 +218,55 @@ fun TouchpadScreen() {
 
                     // Outer ring - touchpad boundary
                     drawCircle(
-                        color = if (isDragging.value) Color.Blue.copy(alpha = 0.6f) else Color.Gray.copy(alpha = 0.4f),
+                        color = if (isDragging.value) Color.Cyan.copy(alpha = 0.8f) else Color.Gray.copy(alpha = 0.4f),
                         radius = radius - 4.dp.toPx(),
                         center = center,
-                        style = Stroke(width = 2.dp.toPx())
+                        style = Stroke(width = 3.dp.toPx())
                     )
+
+                    // Grid lines for reference
+                    for (i in 1..3) {
+                        val lineOffset = (radius / 2f) * i / 2f
+                        // Vertical lines
+                        drawLine(
+                            color = Color.Gray.copy(alpha = 0.2f),
+                            start = Offset(center.x - lineOffset, center.y - radius + 10.dp.toPx()),
+                            end = Offset(center.x - lineOffset, center.y + radius - 10.dp.toPx()),
+                            strokeWidth = 1.dp.toPx()
+                        )
+                        drawLine(
+                            color = Color.Gray.copy(alpha = 0.2f),
+                            start = Offset(center.x + lineOffset, center.y - radius + 10.dp.toPx()),
+                            end = Offset(center.x + lineOffset, center.y + radius - 10.dp.toPx()),
+                            strokeWidth = 1.dp.toPx()
+                        )
+                        // Horizontal lines
+                        drawLine(
+                            color = Color.Gray.copy(alpha = 0.2f),
+                            start = Offset(center.x - radius + 10.dp.toPx(), center.y - lineOffset),
+                            end = Offset(center.x + radius - 10.dp.toPx(), center.y - lineOffset),
+                            strokeWidth = 1.dp.toPx()
+                        )
+                        drawLine(
+                            color = Color.Gray.copy(alpha = 0.2f),
+                            start = Offset(center.x - radius + 10.dp.toPx(), center.y + lineOffset),
+                            end = Offset(center.x + radius - 10.dp.toPx(), center.y + lineOffset),
+                            strokeWidth = 1.dp.toPx()
+                        )
+                    }
                 }
             }
 
-            // Center indicator circle showing last action
+            // Center indicator showing current action
             Box(
                 modifier = Modifier
                     .size(indicatorSize)
                     .clip(CircleShape)
                     .background(
                         when {
-                            isDragging.value -> Color.Blue.copy(alpha = 0.8f)
+                            isDragging.value -> Color.Cyan.copy(alpha = 0.8f)
                             actionFeedbackVisible.value -> Color.Green.copy(alpha = 0.8f)
-                            else -> Color.Gray.copy(alpha = 0.6f)
+                            else -> Color.Blue.copy(alpha = 0.6f)
                         }
                     ),
                 contentAlignment = Alignment.Center
@@ -271,21 +291,17 @@ fun TouchpadScreen() {
                 color = Color.White.copy(alpha = 0.8f)
             )
 
-            // Sensitivity indicator at bottom
+            // Instructions at bottom
             WearText(
-                text = "Scroll: ${scrollSensitivity}x",
+                text = "1 finger: move • 2 fingers: scroll",
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 16.dp),
-                fontSize = 10.sp,
+                fontSize = 9.sp,
+                textAlign = TextAlign.Center,
                 color = Color.White.copy(alpha = 0.6f)
             )
         }
-    }
-
-    // Set input mode to TOUCHPAD when screen loads
-    LaunchedEffect(Unit) {
-        HidClient.instance()?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.TOUCHPAD)
     }
 }
 

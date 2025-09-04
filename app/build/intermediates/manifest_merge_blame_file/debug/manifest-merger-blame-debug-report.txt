@@ -9,259 +9,265 @@
 9        android:targetSdkVersion="34" />
 10
 11    <uses-feature android:name="android.hardware.type.watch" />
-11-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:3:5-64
-11-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:3:19-61
+11-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:3:5-64
+11-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:3:19-61
 12    <uses-feature
-12-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:4:5-88
+12-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:4:5-88
 13        android:name="android.hardware.bluetooth"
-13-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:4:19-60
+13-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:4:19-60
 14        android:required="false" />
-14-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:4:61-85
+14-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:4:61-85
 15    <uses-feature
-15-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:5:5-91
+15-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:5:5-91
 16        android:name="android.hardware.bluetooth_le"
-16-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:5:19-63
+16-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:5:19-63
 17        android:required="false" />
-17-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:5:64-88
+17-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:5:64-88
 18    <uses-feature
-18-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:6:5-95
+18-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:6:5-95
 19        android:name="android.hardware.sensor.gyroscope"
-19-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:6:19-67
+19-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:6:19-67
 20        android:required="false" />
-20-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:6:68-92
+20-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:6:68-92
 21
 22    <uses-permission android:name="android.permission.BLUETOOTH" />
-22-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:8:5-68
-22-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:8:22-65
+22-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:8:5-68
+22-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:8:22-65
 23    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-23-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:9:5-74
-23-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:9:22-71
+23-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:9:5-74
+23-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:9:22-71
 24    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-24-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:10:5-76
-24-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:10:22-73
+24-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:10:5-76
+24-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:10:22-73
 25    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-25-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:11:5-78
-25-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:11:22-75
+25-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:11:5-78
+25-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:11:22-75
 26    <uses-permission
-26-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:12:5-120
+26-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:12:5-120
 27        android:name="android.permission.BLUETOOTH_SCAN"
-27-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:12:22-70
+27-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:12:22-70
 28        android:usesPermissionFlags="neverForLocation" />
-28-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:12:71-117
-29    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-29-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:13:5-77
-29-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:13:22-74
-30    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-30-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:14:5-94
-30-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:14:22-91
-31    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-31-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:15:5-87
-31-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:15:22-84
-32    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-32-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:16:5-77
-32-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:16:22-74
-33    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-33-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:17:5-81
-33-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:17:22-78
-34    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-34-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:18:5-80
-34-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:18:22-77
-35
-36    <permission
-36-->[androidx.core:core:1.12.0] C:\Users\duran\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:22:5-24:47
-37        android:name="com.example.inmocontrol_v2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-37-->[androidx.core:core:1.12.0] C:\Users\duran\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:23:9-81
-38        android:protectionLevel="signature" />
-38-->[androidx.core:core:1.12.0] C:\Users\duran\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:24:9-44
-39
-40    <uses-permission android:name="com.example.inmocontrol_v2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-40-->[androidx.core:core:1.12.0] C:\Users\duran\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:26:5-97
-40-->[androidx.core:core:1.12.0] C:\Users\duran\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:26:22-94
+28-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:12:71-117
+29    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+29-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:13:5-79
+29-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:13:22-76
+30    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+30-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:14:5-81
+30-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:14:22-78
+31    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+31-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:15:5-77
+31-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:15:22-74
+32    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+32-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:16:5-94
+32-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:16:22-91
+33    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+33-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:17:5-87
+33-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:17:22-84
+34    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+34-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:18:5-77
+34-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:18:22-74
+35    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+35-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:19:5-81
+35-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:19:22-78
+36    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+36-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:20:5-80
+36-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:20:22-77
+37
+38    <permission
+38-->[androidx.core:core:1.12.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:22:5-24:47
+39        android:name="com.example.inmocontrol_v2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+39-->[androidx.core:core:1.12.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:23:9-81
+40        android:protectionLevel="signature" />
+40-->[androidx.core:core:1.12.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:24:9-44
 41
-42    <queries>
-42-->[androidx.wear.tiles:tiles:1.1.0] C:\Users\duran\.gradle\caches\8.13\transforms\6dc0c845120c5351fc34c1c08a023d5d\transformed\tiles-1.1.0\AndroidManifest.xml:7:5-11:15
-43        <intent>
-43-->[androidx.wear.tiles:tiles:1.1.0] C:\Users\duran\.gradle\caches\8.13\transforms\6dc0c845120c5351fc34c1c08a023d5d\transformed\tiles-1.1.0\AndroidManifest.xml:8:9-10:18
-44            <action android:name="androidx.wear.tiles.action.BIND_UPDATE_REQUESTER" />
-44-->[androidx.wear.tiles:tiles:1.1.0] C:\Users\duran\.gradle\caches\8.13\transforms\6dc0c845120c5351fc34c1c08a023d5d\transformed\tiles-1.1.0\AndroidManifest.xml:9:13-87
-44-->[androidx.wear.tiles:tiles:1.1.0] C:\Users\duran\.gradle\caches\8.13\transforms\6dc0c845120c5351fc34c1c08a023d5d\transformed\tiles-1.1.0\AndroidManifest.xml:9:21-84
-45        </intent>
-46    </queries>
-47
-48    <application
-48-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:20:5-63:19
-49        android:allowBackup="true"
-49-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:21:9-35
-50        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-50-->[androidx.core:core:1.12.0] C:\Users\duran\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:28:18-86
-51        android:debuggable="true"
-52        android:extractNativeLibs="false"
-53        android:icon="@mipmap/ic_launcher"
-53-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:23:9-43
-54        android:label="InmoControl"
-54-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:22:9-36
-55        android:usesCleartextTraffic="false" >
-55-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:24:9-45
-56        <meta-data
-56-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:26:9-97
-57            android:name="com.google.android.wearable.standalone"
-57-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:26:20-73
-58            android:value="true" />
-58-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:26:74-94
-59
-60        <activity
-60-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:28:9-39:20
-61            android:name="com.example.inmocontrol_v2.MainActivity"
-61-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:28:19-47
-62            android:exported="true" >
-62-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:28:48-71
-63            <intent-filter>
-63-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:29:13-32:29
-64                <action android:name="android.intent.action.MAIN" />
-64-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:30:17-69
-64-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:30:25-66
-65
-66                <category android:name="android.intent.category.LAUNCHER" />
-66-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:31:17-77
-66-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:31:27-74
-67            </intent-filter>
-68            <intent-filter>
-68-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:33:13-38:29
-69                <action android:name="android.intent.action.VIEW" />
-69-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:34:17-69
-69-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:34:25-66
-70
-71                <category android:name="android.intent.category.DEFAULT" />
-71-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:35:17-76
-71-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:35:27-73
-72                <category android:name="android.intent.category.BROWSABLE" />
-72-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:36:17-78
-72-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:36:27-75
-73
-74                <data
-74-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:37:17-67
-75                    android:host="open"
-75-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:37:45-64
-76                    android:scheme="inmo" />
-76-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:37:23-44
-77            </intent-filter>
-78        </activity>
-79
-80        <service
-80-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:41:9-44:72
-81            android:name="com.example.inmocontrol_v2.hid.HidService"
-81-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:42:13-43
-82            android:exported="false"
-82-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:43:13-37
-83            android:foregroundServiceType="connectedDevice|dataSync" />
-83-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:44:13-69
-84
-85        <receiver
-85-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:46:9-50:20
-86            android:name="com.example.inmocontrol_v2.boot.BootReceiver"
-86-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:46:19-52
-87            android:exported="true" >
-87-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:46:53-76
-88            <intent-filter>
-88-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:47:13-49:29
-89                <action android:name="android.intent.action.BOOT_COMPLETED" />
-89-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:48:17-79
-89-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:48:25-76
-90            </intent-filter>
-91        </receiver>
-92
-93        <service
-93-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:52:9-62:19
-94            android:name="com.example.inmocontrol_v2.tile.ModeTileService"
-94-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:53:13-49
-95            android:exported="true"
-95-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:54:13-36
-96            android:label="@string/app_name"
-96-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:55:13-45
-97            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER" >
-97-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:56:13-91
-98            <intent-filter>
-98-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:57:13-59:29
-99                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
-99-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:58:17-88
-99-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:58:25-85
-100            </intent-filter>
-101            <!-- Uncomment the following line if you add tile_preview drawable resource -->
-102            <!-- <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_preview" /> -->
-103        </service>
-104
-105        <provider
-105-->[androidx.emoji2:emoji2:1.4.0] C:\Users\duran\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:24:9-32:20
-106            android:name="androidx.startup.InitializationProvider"
-106-->[androidx.emoji2:emoji2:1.4.0] C:\Users\duran\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:25:13-67
-107            android:authorities="com.example.inmocontrol_v2.androidx-startup"
-107-->[androidx.emoji2:emoji2:1.4.0] C:\Users\duran\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:26:13-68
-108            android:exported="false" >
-108-->[androidx.emoji2:emoji2:1.4.0] C:\Users\duran\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:27:13-37
-109            <meta-data
-109-->[androidx.emoji2:emoji2:1.4.0] C:\Users\duran\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
-110                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-110-->[androidx.emoji2:emoji2:1.4.0] C:\Users\duran\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
-111                android:value="androidx.startup" />
-111-->[androidx.emoji2:emoji2:1.4.0] C:\Users\duran\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
-112            <meta-data
-112-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\duran\.gradle\caches\8.13\transforms\d67868ff57a599130ac96602b3741dad\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
-113                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-113-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\duran\.gradle\caches\8.13\transforms\d67868ff57a599130ac96602b3741dad\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
-114                android:value="androidx.startup" />
-114-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\duran\.gradle\caches\8.13\transforms\d67868ff57a599130ac96602b3741dad\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
-115            <meta-data
-115-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
-116                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-116-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
-117                android:value="androidx.startup" />
-117-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
-118        </provider>
-119
-120        <activity
-120-->[androidx.compose.ui:ui-tooling-android:1.5.4] C:\Users\duran\.gradle\caches\8.13\transforms\ead20b40db6374bbefbaed4c8735d9f9\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
-121            android:name="androidx.compose.ui.tooling.PreviewActivity"
-121-->[androidx.compose.ui:ui-tooling-android:1.5.4] C:\Users\duran\.gradle\caches\8.13\transforms\ead20b40db6374bbefbaed4c8735d9f9\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
-122            android:exported="true" />
-122-->[androidx.compose.ui:ui-tooling-android:1.5.4] C:\Users\duran\.gradle\caches\8.13\transforms\ead20b40db6374bbefbaed4c8735d9f9\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
-123
-124        <receiver
-124-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
-125            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-125-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
-126            android:directBootAware="false"
-126-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
-127            android:enabled="true"
-127-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
-128            android:exported="true"
-128-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
-129            android:permission="android.permission.DUMP" >
-129-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
-130            <intent-filter>
-130-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
-131                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-131-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
-131-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
-132            </intent-filter>
-133            <intent-filter>
-133-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
-134                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-134-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
-134-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
-135            </intent-filter>
-136            <intent-filter>
-136-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
-137                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-137-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
-137-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
-138            </intent-filter>
-139            <intent-filter>
-139-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
-140                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-140-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
-140-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\duran\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
-141            </intent-filter>
-142        </receiver>
-143    </application>
-144
-145</manifest>
+42    <uses-permission android:name="com.example.inmocontrol_v2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+42-->[androidx.core:core:1.12.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:26:5-97
+42-->[androidx.core:core:1.12.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:26:22-94
+43
+44    <queries>
+44-->[androidx.wear.tiles:tiles:1.1.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\6dc0c845120c5351fc34c1c08a023d5d\transformed\tiles-1.1.0\AndroidManifest.xml:7:5-11:15
+45        <intent>
+45-->[androidx.wear.tiles:tiles:1.1.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\6dc0c845120c5351fc34c1c08a023d5d\transformed\tiles-1.1.0\AndroidManifest.xml:8:9-10:18
+46            <action android:name="androidx.wear.tiles.action.BIND_UPDATE_REQUESTER" />
+46-->[androidx.wear.tiles:tiles:1.1.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\6dc0c845120c5351fc34c1c08a023d5d\transformed\tiles-1.1.0\AndroidManifest.xml:9:13-87
+46-->[androidx.wear.tiles:tiles:1.1.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\6dc0c845120c5351fc34c1c08a023d5d\transformed\tiles-1.1.0\AndroidManifest.xml:9:21-84
+47        </intent>
+48    </queries>
+49
+50    <application
+50-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:22:5-65:19
+51        android:allowBackup="true"
+51-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:23:9-35
+52        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+52-->[androidx.core:core:1.12.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\68e0bc3f7e52679be18ac1c2a1a2531f\transformed\core-1.12.0\AndroidManifest.xml:28:18-86
+53        android:debuggable="true"
+54        android:extractNativeLibs="false"
+55        android:icon="@mipmap/ic_launcher"
+55-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:25:9-43
+56        android:label="InmoControl"
+56-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:24:9-36
+57        android:usesCleartextTraffic="false" >
+57-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:26:9-45
+58        <meta-data
+58-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:28:9-97
+59            android:name="com.google.android.wearable.standalone"
+59-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:28:20-73
+60            android:value="true" />
+60-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:28:74-94
+61
+62        <activity
+62-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:30:9-41:20
+63            android:name="com.example.inmocontrol_v2.MainActivity"
+63-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:30:19-47
+64            android:exported="true" >
+64-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:30:48-71
+65            <intent-filter>
+65-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:31:13-34:29
+66                <action android:name="android.intent.action.MAIN" />
+66-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:32:17-69
+66-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:32:25-66
+67
+68                <category android:name="android.intent.category.LAUNCHER" />
+68-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:33:17-77
+68-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:33:27-74
+69            </intent-filter>
+70            <intent-filter>
+70-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:35:13-40:29
+71                <action android:name="android.intent.action.VIEW" />
+71-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:36:17-69
+71-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:36:25-66
+72
+73                <category android:name="android.intent.category.DEFAULT" />
+73-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:37:17-76
+73-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:37:27-73
+74                <category android:name="android.intent.category.BROWSABLE" />
+74-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:38:17-78
+74-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:38:27-75
+75
+76                <data
+76-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:39:17-67
+77                    android:host="open"
+77-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:39:45-64
+78                    android:scheme="inmo" />
+78-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:39:23-44
+79            </intent-filter>
+80        </activity>
+81
+82        <service
+82-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:43:9-46:72
+83            android:name="com.example.inmocontrol_v2.hid.HidService"
+83-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:44:13-43
+84            android:exported="false"
+84-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:45:13-37
+85            android:foregroundServiceType="connectedDevice|dataSync" />
+85-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:46:13-69
+86
+87        <receiver
+87-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:48:9-52:20
+88            android:name="com.example.inmocontrol_v2.boot.BootReceiver"
+88-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:48:19-52
+89            android:exported="true" >
+89-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:48:53-76
+90            <intent-filter>
+90-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:49:13-51:29
+91                <action android:name="android.intent.action.BOOT_COMPLETED" />
+91-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:50:17-79
+91-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:50:25-76
+92            </intent-filter>
+93        </receiver>
+94
+95        <service
+95-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:54:9-64:19
+96            android:name="com.example.inmocontrol_v2.tile.ModeTileService"
+96-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:55:13-49
+97            android:exported="true"
+97-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:56:13-36
+98            android:label="@string/app_name"
+98-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:57:13-45
+99            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER" >
+99-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:58:13-91
+100            <intent-filter>
+100-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:59:13-61:29
+101                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+101-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:60:17-88
+101-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\src\main\AndroidManifest.xml:60:25-85
+102            </intent-filter>
+103            <!-- Uncomment the following line if you add tile_preview drawable resource -->
+104            <!-- <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_preview" /> -->
+105        </service>
+106
+107        <provider
+107-->[androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:24:9-32:20
+108            android:name="androidx.startup.InitializationProvider"
+108-->[androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:25:13-67
+109            android:authorities="com.example.inmocontrol_v2.androidx-startup"
+109-->[androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:26:13-68
+110            android:exported="false" >
+110-->[androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:27:13-37
+111            <meta-data
+111-->[androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
+112                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+112-->[androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
+113                android:value="androidx.startup" />
+113-->[androidx.emoji2:emoji2:1.4.0] D:\Users\duqhildr\.gradle\caches\8.13\transforms\f002c146cae65543b7864fbda9c92cd0\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
+114            <meta-data
+114-->[androidx.lifecycle:lifecycle-process:2.6.2] D:\Users\duqhildr\.gradle\caches\8.13\transforms\d67868ff57a599130ac96602b3741dad\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
+115                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+115-->[androidx.lifecycle:lifecycle-process:2.6.2] D:\Users\duqhildr\.gradle\caches\8.13\transforms\d67868ff57a599130ac96602b3741dad\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
+116                android:value="androidx.startup" />
+116-->[androidx.lifecycle:lifecycle-process:2.6.2] D:\Users\duqhildr\.gradle\caches\8.13\transforms\d67868ff57a599130ac96602b3741dad\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
+117            <meta-data
+117-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+118                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+118-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+119                android:value="androidx.startup" />
+119-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+120        </provider>
+121
+122        <activity
+122-->[androidx.compose.ui:ui-tooling-android:1.5.4] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ead20b40db6374bbefbaed4c8735d9f9\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
+123            android:name="androidx.compose.ui.tooling.PreviewActivity"
+123-->[androidx.compose.ui:ui-tooling-android:1.5.4] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ead20b40db6374bbefbaed4c8735d9f9\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
+124            android:exported="true" />
+124-->[androidx.compose.ui:ui-tooling-android:1.5.4] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ead20b40db6374bbefbaed4c8735d9f9\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
+125
+126        <receiver
+126-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+127            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+127-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+128            android:directBootAware="false"
+128-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+129            android:enabled="true"
+129-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+130            android:exported="true"
+130-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+131            android:permission="android.permission.DUMP" >
+131-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+132            <intent-filter>
+132-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+133                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+133-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+133-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+134            </intent-filter>
+135            <intent-filter>
+135-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+136                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+136-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+136-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+137            </intent-filter>
+138            <intent-filter>
+138-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+139                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+139-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+139-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+140            </intent-filter>
+141            <intent-filter>
+141-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+142                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+142-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+142-->[androidx.profileinstaller:profileinstaller:1.3.1] D:\Users\duqhildr\.gradle\caches\8.13\transforms\ef58320bb9eb6a170531473d8074c038\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+143            </intent-filter>
+144        </receiver>
+145    </application>
+146
+147</manifest>

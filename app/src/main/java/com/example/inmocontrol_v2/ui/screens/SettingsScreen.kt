@@ -112,7 +112,7 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
-                    WearText("Back Button Remap", modifier = Modifier.weight(1f))
+                    WearText("Remote Back Double Click", modifier = Modifier.weight(1f))
                     Switch(
                         checked = remoteBackDoubleClick,
                         onCheckedChange = {
@@ -122,23 +122,9 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
                 }
             }
             item {
-                Button(
-                    onClick = {
-                        onNavigate("connect_device") // Updated to match new route
-                        feedbackMessage = "Connecting to device..."
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp)
-                ) {
-                    WearText("Connect to Device")
-                }
-            }
-            item {
-                Button(
-                    onClick = {
-                        onNavigate("mouse_calibration")
-                        feedbackMessage = "Starting mouse calibration..."
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                androidx.wear.compose.material.Button(
+                    onClick = { onNavigate("mouse_calibration") },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
                     WearText("Mouse Calibration")
                 }
@@ -147,7 +133,7 @@ fun SettingsScreen(onNavigate: (String) -> Unit = {}) {
     }
 }
 
-@Preview(showBackground = true, device = "id:wearos_small_round")
+@Preview(device = "id:wearos_small_round", showSystemUi = true)
 @Composable
 fun SettingsScreenPreview() {
     SettingsScreen()

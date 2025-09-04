@@ -76,15 +76,11 @@ fun KeyboardScreen() {
 
     // Function to send text character by character with proper HID codes
     suspend fun sendTextAsHidKeys(textToSend: String) {
-        val hidClient = HidClient.instance()
-
-        // Switch to keyboard mode
-        hidClient?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.KEYBOARD)
-
+        // HidClient methods are now static - no need for instance()
         textToSend.forEach { char ->
             try {
                 val hidKeyCode = charToHidKeyCode(char)
-                hidClient?.sendKey(hidKeyCode)
+                HidClient.sendKey(hidKeyCode)
                 delay(30)
             } catch (e: Exception) {
                 // Handle error silently
@@ -157,11 +153,6 @@ fun KeyboardScreen() {
                 }
             }
         }
-    }
-
-    // Set input mode to KEYBOARD when screen loads
-    LaunchedEffect(Unit) {
-        HidClient.instance()?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.KEYBOARD)
     }
 }
 

@@ -5,6 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -140,31 +141,22 @@ fun MouseScreen() {
         }
     }
 
-    // Batch and process mouse movement
+    // Batch and process mouse movement - FIXED: Remove infinite loop
     LaunchedEffect(Unit) {
         val movementThreshold = 0.05f
-        while (true) {
-            var deltaX = 0f
-            var deltaY = 0f
-            // Collect events for 50ms
-            val startTime = System.currentTimeMillis()
-            while (System.currentTimeMillis() - startTime < 50) {
-                val event = sensorEventChannel.tryReceive().getOrNull()
-                if (event != null) {
-                    deltaX += event.first
-                    deltaY += event.second
-                } else {
-                    delay(5)
-                }
-            }
+        for (event in sensorEventChannel) {
+            val deltaX = event.first
+            val deltaY = event.second
+
             if (abs(deltaX) > movementThreshold || abs(deltaY) > movementThreshold) {
                 isMoving.value = true
                 lastAction.value = "Moving..."
                 actionFeedbackVisible.value = true
-                coroutineScope.launch {
-                    try {
-                        HidClient.instance()?.moveMouse((deltaX * sensitivity).toInt(), (deltaY * sensitivity).toInt())
-                    } catch (e: Exception) {}
+
+                try {
+                    HidClient.moveMouse((deltaX * sensitivity).toInt(), (deltaY * sensitivity).toInt())
+                } catch (e: Exception) {
+                    Log.e("MouseScreen", "Error sending mouse movement: ${e.message}")
                 }
 
                 // Stop showing movement after a brief delay
@@ -197,7 +189,7 @@ fun MouseScreen() {
                                     lastAction.value = "Left Click"
                                     actionFeedbackVisible.value = true
                                     try {
-                                        HidClient.instance()?.mouseLeftClick()
+                                        HidClient.mouseLeftClick()
                                     } catch (e: Exception) {}
                                 }
                             },
@@ -206,7 +198,7 @@ fun MouseScreen() {
                                     lastAction.value = "Right Click"
                                     actionFeedbackVisible.value = true
                                     try {
-                                        HidClient.instance()?.mouseRightClick()
+                                        HidClient.mouseRightClick()
                                     } catch (e: Exception) {}
                                 }
                             },
@@ -215,7 +207,7 @@ fun MouseScreen() {
                                     lastAction.value = "Double Click"
                                     actionFeedbackVisible.value = true
                                     try {
-                                        HidClient.instance()?.mouseDoubleClick()
+                                        HidClient.mouseDoubleClick()
                                     } catch (e: Exception) {}
                                 }
                             }
@@ -297,11 +289,6 @@ fun MouseScreen() {
                 color = Color.White.copy(alpha = 0.6f)
             )
         }
-    }
-
-    // Set input mode to MOUSE when screen loads
-    LaunchedEffect(Unit) {
-        HidClient.instance()?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.MOUSE)
     }
 }
 

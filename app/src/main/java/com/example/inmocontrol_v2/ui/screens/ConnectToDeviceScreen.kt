@@ -2,9 +2,9 @@ package com.example.inmocontrol_v2.ui.screens
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -22,10 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.Button as WearButton
 import androidx.wear.compose.material.CircularProgressIndicator as WearCircularProgressIndicator
@@ -34,51 +31,40 @@ import androidx.wear.compose.material.Scaffold as WearScaffold
 import androidx.wear.compose.material.Text as WearText
 import com.example.inmocontrol_v2.hid.HidClient
 import com.example.inmocontrol_v2.hid.HidService
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import android.content.pm.PackageManager
-import android.content.ComponentName
-import android.content.ServiceConnection
-import android.os.IBinder
+import kotlin.collections.LinkedHashMap
 
-enum class DeviceType { BLE, CLASSIC }
+enum class DeviceType { BLE }
 
 sealed class DeviceProfile {
     object InmoAir2 : DeviceProfile()
     object GenericHid : DeviceProfile()
 }
 
-fun identifyDeviceProfile(deviceName: String): DeviceProfile {
-    if (deviceName.contains("Inmo Air 2", ignoreCase = true)) return DeviceProfile.InmoAir2
-    return DeviceProfile.GenericHid
-}
+fun identifyDeviceProfile(deviceName: String): DeviceProfile =
+    if (deviceName.contains("Inmo", ignoreCase = true)) DeviceProfile.InmoAir2
+    else DeviceProfile.GenericHid
 
-// Smart filter function to identify devices with good signal strength
-fun hasGoodSignalStrength(rssi: Int): Boolean {
-    // RSSI values are negative, closer to 0 means stronger signal
-    // Typical ranges: -30 to -50 = excellent, -50 to -70 = good, -70 to -90 = fair, below -90 = poor
-    return rssi >= -70 // Improved threshold for better device detection
-}
+fun hasGoodSignalStrength(rssi: Int): Boolean = rssi >= -70
 
-// Keep track of seen devices to prevent duplicates
+// Optimized data class for device info
 data class DeviceInfo(
     val name: String,
     val address: String,
     val rssi: Int,
     val type: DeviceType,
-    val lastSeen: Long = System.currentTimeMillis()
+    val profile: DeviceProfile
 )
 
 @Composable
 fun ConnectToDeviceScreenContent(
     state: ConnectionState,
-    deviceList: List<Pair<String, Int>>,
-    pairedDevices: List<String> = emptyList(),
-    connectedDevice: String? = null,
-    deviceProfileMap: Map<String, DeviceProfile> = emptyMap(),
+    deviceList: List<DeviceInfo>,
     onScan: () -> Unit = {},
-    onPair: (String) -> Unit = {},
     onConnect: (String) -> Unit = {},
     onOpenControls: () -> Unit = {},
     onEnableBluetooth: () -> Unit = {}
@@ -87,142 +73,77 @@ fun ConnectToDeviceScreenContent(
         TimeText()
         ScalingLazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
-                WearText("Connect to Device", modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-                Spacer(modifier = Modifier.height(8.dp))
+                WearText("Connect Device", modifier = Modifier.padding(8.dp))
             }
+
             item {
                 when (state) {
                     is ConnectionState.Idle -> {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            WearButton(
-                                onClick = onScan,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                WearText("Scan for Devices", modifier = Modifier.padding(8.dp))
-                            }
+                        WearButton(
+                            onClick = onScan,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        ) {
+                            WearText("Scan Devices")
                         }
                     }
                     is ConnectionState.Searching -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            WearText("Scanning for devices...", modifier = Modifier.padding(bottom = 4.dp))
-                            WearCircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            WearText("Scanning...")
+                            WearCircularProgressIndicator(modifier = Modifier.size(20.dp))
                         }
                     }
                     is ConnectionState.Connecting -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            WearText("Connecting to device...", modifier = Modifier.padding(vertical = 8.dp))
-                            WearCircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            WearText("Connecting...")
+                            WearCircularProgressIndicator(modifier = Modifier.size(24.dp))
                         }
                     }
                     is ConnectionState.Connected -> {
-                        val connectedState = state
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            WearText("Connected to ${connectedState.deviceName}", modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-                            WearText("Opening controls...", modifier = Modifier.padding(vertical = 8.dp))
-                            WearCircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        }
-
-                        // Auto-navigate immediately when connected
-                        LaunchedEffect(connectedState.deviceName) {
-                            delay(1000) // Brief delay to show connection success
-                            onOpenControls()
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            WearText("Connected!")
+                            LaunchedEffect(Unit) {
+                                delay(500)
+                                onOpenControls()
+                            }
                         }
                     }
                     is ConnectionState.Error -> {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                WearText("Error: ${state.message}", modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Show "Enable Bluetooth" button for Bluetooth-related errors
-                                if (state.message.contains("Bluetooth", ignoreCase = true)) {
-                                    WearButton(
-                                        onClick = onEnableBluetooth,
-                                        modifier = Modifier
-                                            .widthIn(max = 150.dp)
-                                            .padding(vertical = 4.dp)
-                                    ) {
-                                        WearText("Enable Bluetooth")
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            WearText("Error: ${state.message}", modifier = Modifier.padding(8.dp))
+                            if (state.message.contains("Bluetooth", ignoreCase = true)) {
+                                WearButton(onClick = onEnableBluetooth) {
+                                    WearText("Enable BT")
                                 }
-
-                                WearButton(
-                                    onClick = onScan,
-                                    modifier = Modifier
-                                        .widthIn(max = 120.dp)
-                                        .padding(vertical = 8.dp)
-                                ) {
-                                    WearText("Retry")
-                                }
+                            }
+                            WearButton(onClick = onScan) {
+                                WearText("Retry")
                             }
                         }
                     }
                 }
             }
-            item {
-                when (state) {
-                    is ConnectionState.Searching -> {
-                        // Show device list
-                        if (deviceList.isEmpty()) {
-                            WearText("No devices found yet", modifier = Modifier.padding(top = 4.dp))
-                        } else {
-                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                ScalingLazyColumn(
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                ) {
-                                    items(deviceList.size) { idx ->
-                                        val (name, rssi) = deviceList[idx]
-                                        val isPaired = pairedDevices.contains(name)
-                                        val isConnected = connectedDevice == name
-                                        WearButton(
-                                            onClick = {
-                                                if (!isPaired) onPair(name)
-                                                onConnect(name)
-                                            },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                if (isConnected) {
-                                                    WearIcon(Icons.Filled.Bluetooth, contentDescription = "Connected", modifier = Modifier.size(24.dp))
-                                                } else if (isPaired) {
-                                                    WearIcon(Icons.Filled.Bluetooth, contentDescription = "Paired", modifier = Modifier.size(24.dp))
-                                                } else {
-                                                    WearIcon(Icons.Filled.BluetoothSearching, contentDescription = "Discovered", modifier = Modifier.size(24.dp))
-                                                }
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                WearText(name, modifier = Modifier.weight(1f))
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                // WearText("RSSI: $rssi", modifier = Modifier)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+
+            if (state is ConnectionState.Searching && deviceList.isNotEmpty()) {
+                items(minOf(deviceList.size, 5)) { idx ->
+                    val device = deviceList[idx]
+                    WearButton(
+                        onClick = { onConnect(device.name) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            WearIcon(
+                                if (device.profile is DeviceProfile.InmoAir2) Icons.Filled.Bluetooth
+                                else Icons.Filled.BluetoothSearching,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            WearText(device.name, modifier = Modifier.weight(1f))
                         }
                     }
-                    else -> { /* Do nothing */ }
                 }
             }
         }
@@ -230,632 +151,339 @@ fun ConnectToDeviceScreenContent(
 }
 
 @Composable
-fun ConnectToDeviceScreen(
-    onOpenControls: () -> Unit = {}
-) {
+fun ConnectToDeviceScreen(onOpenControls: () -> Unit = {}) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val connectionStateViewModel: ConnectionStateViewModel = viewModel()
-    var scanCallback: ScanCallback? by remember { mutableStateOf(null) }
-    var scanRequested by remember { mutableStateOf(false) }
-    val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
+    val scope = rememberCoroutineScope()
+    val bluetoothManager = remember { context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager }
     val bluetoothAdapter = bluetoothManager.adapter
+
     var state by remember { mutableStateOf<ConnectionState>(ConnectionState.Idle) }
-    var deviceList by remember { mutableStateOf(listOf<Triple<String, Int, DeviceType>>()) }
-    var deviceMap by remember { mutableStateOf(mapOf<String, BluetoothDevice>()) }
-    var deviceProfileMap by remember { mutableStateOf(mapOf<String, DeviceProfile>()) }
-    var scanDebugInfo by remember { mutableStateOf("Ready to scan") }
+    var deviceMap by remember { mutableStateOf(LinkedHashMap<String, DeviceInfo>()) }
+    var scanCallback by remember { mutableStateOf<ScanCallback?>(null) }
+    var connectionReceiver by remember { mutableStateOf<BroadcastReceiver?>(null) }
+    var scanJob by remember { mutableStateOf<Job?>(null) }
 
-    // Settings store for device memory
     val settingsStore = remember { com.example.inmocontrol_v2.data.SettingsStore.get(context) }
-    val lastDeviceName by settingsStore.lastConnectedDeviceName.collectAsState(initial = null)
-    val lastDeviceAddress by settingsStore.lastConnectedDeviceAddress.collectAsState(initial = null)
-    val autoReconnectEnabled by settingsStore.autoReconnectEnabled.collectAsState(initial = true)
 
-    // Bluetooth enable launcher - NEW FEATURE
-    val bluetoothEnableLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            // Bluetooth was enabled successfully, start scanning automatically
-            coroutineScope.launch {
-                delay(1000) // Brief delay to ensure Bluetooth is fully enabled
-                scanRequested = true
-            }
-        } else {
-            // User declined to enable Bluetooth
-            state = ConnectionState.Error("Bluetooth is required for device connection")
-        }
-    }
-
-    // NEW: Enhanced connection function with validation
-    val connectToDeviceWithValidation: (BluetoothDevice, String, HidService?, ConnectionStateViewModel, com.example.inmocontrol_v2.data.SettingsStore, () -> Unit, (String) -> Unit, () -> Unit) -> Unit = { device, deviceName, hidService, connectionStateViewModel, settingsStore, onSuccess, onError, onTimeout ->
-        coroutineScope.launch {
-            try {
-                // Establish actual GATT connection
-                hidService?.connect(device)
-
-                // Set device profile for HidClient
-                HidClient.currentDeviceProfile = deviceProfileMap[deviceName]
-
-                // Save device for auto-reconnect
-                settingsStore.setLastConnectedDevice(deviceName, device.address)
-
-                // FIXED: Use connection validation with timeout instead of fixed delay
-                connectionStateViewModel.validateConnection(
-                    connectionCheck = {
-                        // Check if HidService reports actual connection
-                        hidService?.isDeviceConnected() == true
-                    },
-                    onSuccess = {
-                        Log.d("ConnectToDeviceScreen", "Connection validated successfully")
-                        connectionStateViewModel.setConnected()
-                        onSuccess()
-                    },
-                    onTimeout = {
-                        Log.w("ConnectToDeviceScreen", "Connection validation timed out")
-                        connectionStateViewModel.setError("Connection timeout")
-                        onTimeout()
-                    },
-                    onError = { errorMessage ->
-                        Log.e("ConnectToDeviceScreen", "Connection validation failed: $errorMessage")
-                        connectionStateViewModel.setError(errorMessage)
-                        onError(errorMessage)
-                    }
-                )
-
-            } catch (e: Exception) {
-                Log.e("ConnectToDeviceScreen", "Connection failed with exception: ${e.message}")
-                connectionStateViewModel.setError("Connection failed: ${e.message}")
-                onError("Connection failed: ${e.message}")
-            }
-        }
-    }
-
-    // Enhanced function to start scanning for devices
-    val startScanning: () -> Unit = remember {
+    // Improved cleanup function with better error handling
+    val cleanup = remember {
         {
-            coroutineScope.launch {
-                scanDebugInfo = "Starting scan..."
-                deviceList = emptyList()
-                deviceMap = emptyMap()
-                deviceProfileMap = emptyMap()
+            try {
+                // Cancel any ongoing scan job first
+                scanJob?.cancel()
+                scanJob = null
+
+                // Stop BLE scanning
+                scanCallback?.let { callback ->
+                    try {
+                        if (bluetoothAdapter?.isEnabled == true) {
+                            bluetoothAdapter.bluetoothLeScanner?.stopScan(callback)
+                            Log.d("ConnectScreen", "BLE scan stopped")
+                        }
+                    } catch (e: SecurityException) {
+                        Log.w("ConnectScreen", "Permission denied stopping scan: ${e.message}")
+                    } catch (e: Exception) {
+                        Log.w("ConnectScreen", "Error stopping scan: ${e.message}")
+                    }
+                    scanCallback = null
+                }
+
+                // Unregister broadcast receiver
+                connectionReceiver?.let { receiver ->
+                    try {
+                        context.unregisterReceiver(receiver)
+                        Log.d("ConnectScreen", "Receiver unregistered")
+                    } catch (e: Exception) {
+                        Log.w("ConnectScreen", "Error unregistering receiver: ${e.message}")
+                    }
+                    connectionReceiver = null
+                }
+            } catch (e: Exception) {
+                Log.e("ConnectScreen", "Cleanup error: ${e.message}")
+            }
+        }
+    }
+
+    // Cleanup on dispose
+    DisposableEffect(Unit) {
+        onDispose {
+            Log.d("ConnectScreen", "Disposing ConnectToDeviceScreen")
+            cleanup()
+        }
+    }
+
+    // Improved permission checker
+    val hasRequiredPermissions = remember {
+        {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+            } else {
+                context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                context.checkSelfPermission(Manifest.permission.BLUETOOTH) == PackageManager.PERMISSION_GRANTED &&
+                context.checkSelfPermission(Manifest.permission.BLUETOOTH_ADMIN) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+    }
+
+    // Improved scan function with better settings and error handling
+    val startScan: () -> Unit = remember {
+        {
+            // Prevent multiple scans
+            if (state !is ConnectionState.Searching) {
+                cleanup() // Clean up any previous state
+                deviceMap.clear()
                 state = ConnectionState.Searching
 
-                // FIXED: Check if Bluetooth is enabled and request enable if not
-                if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
-                    scanDebugInfo = "Bluetooth not enabled"
+                Log.d("ConnectScreen", "Starting device scan")
 
-                    // NEW: Request Bluetooth enable instead of showing error
-                    if (bluetoothAdapter != null) {
-                        val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                        bluetoothEnableLauncher.launch(enableBtIntent)
-                        return@launch
-                    } else {
-                        state = ConnectionState.Error("Bluetooth adapter not available")
-                        return@launch
-                    }
-                }
-
-                val hasPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
-                    context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-                } else {
-                    context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                }
-
-                if (!hasPermissions) {
-                    scanDebugInfo = "Missing permissions"
-                    state = ConnectionState.Error("Bluetooth permissions not granted")
-                    return@launch
-                }
-
-                // Start BLE scan
-                val scanner = bluetoothAdapter.bluetoothLeScanner
-                if (scanner != null) {
+                scanJob = scope.launch {
                     try {
+                        // Check Bluetooth adapter
+                        if (bluetoothAdapter?.isEnabled != true) {
+                            state = ConnectionState.Error("Bluetooth not enabled")
+                            return@launch
+                        }
+
+                        // Check permissions
+                        if (!hasRequiredPermissions()) {
+                            val missingPerms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                "BLUETOOTH_SCAN and BLUETOOTH_CONNECT"
+                            } else {
+                                "LOCATION and BLUETOOTH"
+                            }
+                            state = ConnectionState.Error("Missing permissions: $missingPerms")
+                            return@launch
+                        }
+
+                        val scanner = bluetoothAdapter.bluetoothLeScanner
+                        if (scanner == null) {
+                            state = ConnectionState.Error("BLE scanner not available")
+                            return@launch
+                        }
+
+                        // Improved scan settings for better performance and reliability
+                        val scanSettings = ScanSettings.Builder()
+                            .setScanMode(ScanSettings.SCAN_MODE_BALANCED) // Better than LOW_POWER
+                            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+                            .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE) // Find devices faster
+                            .setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
+                            .setReportDelay(0) // Real-time results
+                            .build()
+
+                        // Create scan callback with improved filtering
                         scanCallback = object : ScanCallback() {
                             override fun onScanResult(callbackType: Int, result: ScanResult?) {
                                 result?.device?.let { device ->
-                                    val rawName = try {
-                                        device.name
-                                    } catch (_: SecurityException) { null }
-                                    val name = rawName?.takeIf { it.isNotBlank() } ?: "Unknown (${device.address ?: "NoAddr"})"
-                                    val rssi = result.rssi
-                                    val profile = identifyDeviceProfile(name)
+                                    try {
+                                        val name = device.name
+                                        if (name.isNullOrBlank()) return
 
-                                    // Apply smart filter and prevent duplicates using device address
-                                    if (hasGoodSignalStrength(rssi)) {
-                                        coroutineScope.launch(Dispatchers.Main) {
-                                            val deviceAddress = device.address
-                                            val existingDeviceIndex = deviceList.indexOfFirst { (_, _, _) ->
-                                                val existingDevice = deviceMap.values.find { it.address == deviceAddress }
-                                                existingDevice != null
-                                            }
+                                        // Improved signal strength check and device filtering
+                                        if (result.rssi < -85) return // Too weak signal
 
-                                            if (existingDeviceIndex == -1) {
-                                                deviceList = deviceList + Triple(name, rssi, DeviceType.BLE)
-                                                deviceMap = deviceMap + (name to device)
-                                                deviceProfileMap = deviceProfileMap + (name to profile)
-                                                scanDebugInfo = "BLE found: $name (RSSI: $rssi)"
-                                            }
+                                        // Filter for relevant devices (you can customize this)
+                                        val deviceNameLower = name.lowercase()
+                                        val isRelevantDevice = deviceNameLower.contains("inmo") ||
+                                                             deviceNameLower.contains("air") ||
+                                                             deviceNameLower.contains("mouse") ||
+                                                             deviceNameLower.contains("keyboard") ||
+                                                             deviceNameLower.contains("hid")
+
+                                        if (!isRelevantDevice) return
+
+                                        val deviceInfo = DeviceInfo(
+                                            name = name,
+                                            address = device.address,
+                                            rssi = result.rssi,
+                                            type = DeviceType.BLE,
+                                            profile = identifyDeviceProfile(name)
+                                        )
+
+                                        // Prevent memory issues with too many devices
+                                        if (deviceMap.size >= 8) {
+                                            deviceMap.remove(deviceMap.keys.first())
                                         }
+                                        deviceMap[name] = deviceInfo
+
+                                        Log.d("ConnectScreen", "Found device: $name (${result.rssi} dBm)")
+                                    } catch (e: Exception) {
+                                        Log.w("ConnectScreen", "Error processing scan result: ${e.message}")
                                     }
                                 }
                             }
 
                             override fun onScanFailed(errorCode: Int) {
-                                coroutineScope.launch(Dispatchers.Main) {
-                                    scanDebugInfo = "BLE Scan failed: $errorCode"
-                                    if (errorCode != ScanCallback.SCAN_FAILED_ALREADY_STARTED) {
-                                        state = ConnectionState.Error("BLE Scan failed: $errorCode")
-                                    }
+                                val errorMsg = when (errorCode) {
+                                    ScanCallback.SCAN_FAILED_ALREADY_STARTED -> "Scan already started"
+                                    ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED -> "App registration failed"
+                                    ScanCallback.SCAN_FAILED_INTERNAL_ERROR -> "Internal scanner error"
+                                    ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED -> "Scan feature not supported"
+                                    ScanCallback.SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES -> "Out of hardware resources"
+                                    ScanCallback.SCAN_FAILED_SCANNING_TOO_FREQUENTLY -> "Scanning too frequently"
+                                    else -> "Unknown error: $errorCode"
                                 }
+                                Log.e("ConnectScreen", "Scan failed: $errorMsg")
+                                state = ConnectionState.Error("Scan failed: $errorMsg")
+                                cleanup()
                             }
                         }
 
-                        val settings = android.bluetooth.le.ScanSettings.Builder()
-                            .setScanMode(android.bluetooth.le.ScanSettings.SCAN_MODE_LOW_LATENCY)
-                            .build()
-
-                        scanner.startScan(null, settings, scanCallback!!)
-                        scanDebugInfo = "BLE scan started"
-
-                        coroutineScope.launch {
-                            delay(30000)
-                            if (scanCallback != null) {
-                                try {
-                                    scanner.stopScan(scanCallback!!)
-                                    scanDebugInfo = "BLE scan stopped after timeout"
-                                } catch (e: Exception) {
-                                    scanDebugInfo = "Error stopping BLE scan: ${e.message}"
-                                }
-                                scanCallback = null
-
-                                if (bluetoothAdapter.isDiscovering != true) {
-                                    state = ConnectionState.Idle
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        scanDebugInfo = "Error starting BLE scan: ${e.message}"
-                        state = ConnectionState.Error("Failed to start BLE scan: ${e.message}")
-                    }
-                } else {
-                    scanDebugInfo = "BLE scanner not available"
-                }
-
-                // Start classic Bluetooth discovery
-                try {
-                    if (bluetoothAdapter.isDiscovering) {
-                        bluetoothAdapter.cancelDiscovery()
-                    }
-                    val started = bluetoothAdapter.startDiscovery()
-                    scanDebugInfo = "Classic discovery " + (if (started) "started" else "failed")
-                    if (!started) {
-                        if (scanner == null) {
-                            state = ConnectionState.Error("Failed to start Bluetooth discovery")
-                        }
-                    }
-                } catch (e: Exception) {
-                    scanDebugInfo = "Error with classic discovery: ${e.message}"
-                    if (scanner == null) {
-                        state = ConnectionState.Error("Error with Bluetooth discovery: ${e.message}")
-                    }
-                }
-            }
-        }
-    }
-
-    // HidService connection
-    var hidService by remember { mutableStateOf<HidService?>(null) }
-    val serviceConnection = remember {
-        object : ServiceConnection {
-            override fun onServiceConnected(className: ComponentName, service: IBinder) {
-                val binder = service as HidService.LocalBinder
-                hidService = binder.getService()
-                HidClient.setService(hidService)
-
-                // Try auto-reconnect if enabled and we have a saved device
-                val deviceName = lastDeviceName
-                val deviceAddress = lastDeviceAddress
-                if (autoReconnectEnabled && deviceName != null && deviceAddress != null) {
-                    coroutineScope.launch {
-                        delay(1000) // Brief delay to ensure service is ready
+                        // Start scanning
                         try {
-                            val pairedDevices = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                                    bluetoothAdapter?.bondedDevices
-                                } else {
-                                    emptySet()
-                                }
-                            } else {
-                                bluetoothAdapter?.bondedDevices
-                            }
-                            val savedDevice = pairedDevices?.find { it.address == deviceAddress }
-
-                            if (savedDevice != null) {
-                                state = ConnectionState.Connecting
-                                connectionStateViewModel.setConnecting()
-
-                                // Use enhanced connection with validation
-                                connectToDeviceWithValidation(
-                                    savedDevice,
-                                    deviceName,
-                                    hidService,
-                                    connectionStateViewModel,
-                                    settingsStore,
-                                    {
-                                        state = ConnectionState.Connected(deviceName)
-                                        coroutineScope.launch {
-                                            delay(1000)
-                                            onOpenControls()
-                                        }
-                                    },
-                                    { errorMessage: String ->
-                                        state = ConnectionState.Error("Auto-reconnect failed: $errorMessage")
-                                    },
-                                    {
-                                        state = ConnectionState.Error("Auto-reconnect timed out")
-                                    }
-                                )
-                            }
+                            scanner.startScan(null, scanSettings, scanCallback)
+                            Log.d("ConnectScreen", "BLE scan started successfully")
+                        } catch (e: SecurityException) {
+                            state = ConnectionState.Error("Permission denied for scanning")
+                            cleanup()
+                            return@launch
                         } catch (e: Exception) {
-                            // Auto-reconnect failed, user will need to manually connect
-                            state = ConnectionState.Idle
+                            state = ConnectionState.Error("Failed to start scan: ${e.message}")
+                            cleanup()
+                            return@launch
                         }
-                    }
-                }
-            }
 
-            override fun onServiceDisconnected(arg0: ComponentName) {
-                hidService = null
-                HidClient.setService(null)
-            }
-        }
-    }
+                        // Scan timeout with proper cleanup - reduced to 10 seconds
+                        delay(10000)
 
-    // Bind to HidService
-    DisposableEffect(Unit) {
-        val intent = Intent(context, HidService::class.java)
-        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-        onDispose {
-            context.unbindService(serviceConnection)
-        }
-    }
+                        // Stop scanning and check results
+                        try {
+                            scanner.stopScan(scanCallback)
+                            scanCallback = null
+                            Log.d("ConnectScreen", "Scan completed, found ${deviceMap.size} devices")
+                        } catch (e: Exception) {
+                            Log.w("ConnectScreen", "Error stopping scan: ${e.message}")
+                        }
 
-    // Classic Bluetooth BroadcastReceiver
-    val classicReceiver = remember {
-        object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                when (intent?.action) {
-                    BluetoothDevice.ACTION_FOUND -> {
-                        val device: BluetoothDevice? = if (Build.VERSION.SDK_INT >= 33) {
-                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                        // Update state based on results
+                        if (deviceMap.isEmpty()) {
+                            state = ConnectionState.Error("No compatible devices found")
                         } else {
-                            @Suppress("DEPRECATION")
-                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                            // Keep in searching state so devices are shown
+                            Log.d("ConnectScreen", "Scan completed successfully with ${deviceMap.size} devices")
                         }
-                        val rssi: Int = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE).toInt()
-                        val rawName = try {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                if (context != null && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                                    device?.name
-                                } else {
-                                    null
-                                }
-                            } else {
-                                device?.name
-                            }
-                        } catch (_: SecurityException) { null }
-                        val name = rawName?.takeIf { it.isNotBlank() } ?: "Unknown (${device?.address ?: "NoAddr"})"
 
-                        // Apply smart filter and prevent duplicates using device address
-                        if (device != null && hasGoodSignalStrength(rssi)) {
-                            val deviceAddress = device.address
-                            val existingDeviceIndex = deviceList.indexOfFirst { (_, _, _) ->
-                                val existingDevice = deviceMap.values.find { it.address == deviceAddress }
-                                existingDevice != null
-                            }
-
-                            if (existingDeviceIndex == -1) {
-                                deviceList = deviceList + Triple(name, rssi, DeviceType.CLASSIC)
-                                deviceMap = deviceMap + (name to device)
-                                deviceProfileMap = deviceProfileMap + (name to identifyDeviceProfile(name))
-                                scanDebugInfo = "Classic found: $name (RSSI: $rssi)"
-                            }
-                        }
-                    }
-                    BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                        scanDebugInfo = "Classic discovery finished"
-                        if (scanCallback == null && state is ConnectionState.Searching) {
-                            state = ConnectionState.Idle
-                        }
-                    }
-                    BluetoothAdapter.ACTION_STATE_CHANGED -> {
-                        val bluetoothState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
-                        when (bluetoothState) {
-                            BluetoothAdapter.STATE_ON -> {
-                                scanDebugInfo = "Bluetooth turned ON"
-                                if (scanRequested) {
-                                    startScanning()
-                                    scanRequested = false
-                                }
-                            }
-                            BluetoothAdapter.STATE_OFF -> {
-                                scanDebugInfo = "Bluetooth turned OFF"
-                            }
-                        }
+                    } catch (e: CancellationException) {
+                        Log.d("ConnectScreen", "Scan cancelled")
+                        cleanup()
+                    } catch (e: Exception) {
+                        Log.e("ConnectScreen", "Scan error: ${e.message}")
+                        state = ConnectionState.Error("Scan error: ${e.message}")
+                        cleanup()
                     }
                 }
+            } else {
+                Log.w("ConnectScreen", "Scan already in progress")
             }
         }
     }
 
-    // Register for ALL relevant Bluetooth events
-    DisposableEffect(Unit) {
-        val filter = IntentFilter().apply {
-            addAction(BluetoothDevice.ACTION_FOUND)
-            addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
-            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
-            addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
-        }
-        context.registerReceiver(classicReceiver, filter)
-        onDispose {
-            try {
-                context.unregisterReceiver(classicReceiver)
-                if (bluetoothAdapter?.isDiscovering == true) {
-                    if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
-                        bluetoothAdapter.cancelDiscovery()
-                    }
-                }
-                scanCallback?.let { callback ->
-                    if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
-                        bluetoothAdapter?.bluetoothLeScanner?.stopScan(callback)
-                    }
-                }
-            } catch (e: Exception) {
-                // Handle any exceptions during cleanup
+    val bluetoothEnableLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            scope.launch {
+                delay(1000)
+                startScan()
             }
+        } else {
+            state = ConnectionState.Error("Bluetooth required")
         }
     }
 
-    // Permission handling with LaunchedEffect
-    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
-    } else {
-        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-    }
-
-    var permissionsRequested by remember { mutableStateOf(false) }
-    val allGranted = permissions.all {
-        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-    }
-
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (permissions.all { result[it] == true }) {
-            if (scanRequested) {
-                startScanning()
-                scanRequested = false
-            }
-        }
-    }
-
-    LaunchedEffect(allGranted, permissionsRequested, scanRequested) {
-        if (!allGranted && !permissionsRequested && context is android.app.Activity) {
-            permissionsRequested = true
-            launcher.launch(permissions)
-        } else if (allGranted && scanRequested) {
-            startScanning()
-            scanRequested = false
-        }
-    }
-
-    // UI Content
-    WearScaffold {
-        TimeText()
-        ScalingLazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                WearText("Connect to Device", modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            // Show debug info
-            item {
-                if (scanDebugInfo.isNotEmpty()) {
-                    WearText("Status: $scanDebugInfo",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.caption2
-                    )
-                }
-            }
-
-            item {
-                when (state) {
-                    is ConnectionState.Idle -> {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            WearButton(
-                                onClick = {
-                                    scanRequested = true
-                                    startScanning()
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                WearText("Scan for Devices", modifier = Modifier.padding(8.dp))
-                            }
-                        }
-                    }
-                    is ConnectionState.Searching -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            WearText("Scanning for devices...", modifier = Modifier.padding(bottom = 4.dp))
-                            WearCircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
-                    is ConnectionState.Connecting -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            WearText("Connecting to device...", modifier = Modifier.padding(vertical = 8.dp))
-                            WearCircularProgressIndicator(modifier = Modifier.size(32.dp))
-                        }
-                    }
-                    is ConnectionState.Connected -> {
-                        val connectedState = state as ConnectionState.Connected
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            WearText("Connected to ${connectedState.deviceName}", modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-                            WearText("Opening controls...", modifier = Modifier.padding(vertical = 8.dp))
-                            WearCircularProgressIndicator(modifier = Modifier.size(24.dp))
+    // Improved connection function with better error handling
+    val connectToDevice: (String) -> Unit = remember {
+        { deviceName: String ->
+            if (state !is ConnectionState.Connecting) {
+                scope.launch {
+                    try {
+                        val deviceInfo = deviceMap[deviceName]
+                        if (deviceInfo == null) {
+                            state = ConnectionState.Error("Device not found")
+                            return@launch
                         }
 
-                        // Auto-navigate immediately when connected
-                        LaunchedEffect(connectedState.deviceName) {
-                            delay(1000) // Brief delay to show connection success
-                            onOpenControls()
+                        cleanup() // Clean up scanning
+                        state = ConnectionState.Connecting
+                        Log.d("ConnectScreen", "Connecting to device: $deviceName")
+
+                        // Check permissions again
+                        if (!hasRequiredPermissions()) {
+                            state = ConnectionState.Error("Missing connection permissions")
+                            return@launch
                         }
-                    }
-                    is ConnectionState.Error -> {
-                        val errorState = state as ConnectionState.Error
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                WearText("Error: ${errorState.message}",
-                                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
 
-                                // FIXED: Show "Enable Bluetooth" button for Bluetooth-related errors
-                                if (errorState.message.contains("Bluetooth", ignoreCase = true) &&
-                                    bluetoothAdapter != null && !bluetoothAdapter.isEnabled) {
-                                    WearButton(
-                                        onClick = {
-                                            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                                            bluetoothEnableLauncher.launch(enableBtIntent)
-                                        },
-                                        modifier = Modifier
-                                            .widthIn(max = 150.dp)
-                                            .padding(vertical = 4.dp)
-                                    ) {
-                                        WearText("Enable Bluetooth")
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-
-                                WearButton(
-                                    onClick = {
-                                        scanRequested = true
-                                        startScanning()
-                                    },
-                                    modifier = Modifier
-                                        .widthIn(max = 120.dp)
-                                        .padding(vertical = 8.dp)
-                                ) {
-                                    WearText("Retry")
-                                }
-                            }
+                        val device = bluetoothAdapter?.getRemoteDevice(deviceInfo.address)
+                        if (device == null) {
+                            state = ConnectionState.Error("Cannot get device")
+                            return@launch
                         }
-                    }
-                }
-            }
 
-            // Show device list only when scanning and devices are found
-            if (state is ConnectionState.Searching && deviceList.isNotEmpty()) {
-                items(deviceList.size) { idx ->
-                    val deviceTriple = deviceList[idx]
-                    val (name, rssi, _) = deviceTriple
-                    val isPaired = deviceMap[name]?.bondState == BluetoothDevice.BOND_BONDED
+                        // Set device profile and save settings
+                        HidClient.currentDeviceProfile = deviceInfo.profile
+                        settingsStore.setLastConnectedDevice(deviceName, device.address)
 
-                    WearButton(
-                        onClick = {
-                            // Stop scanning when user selects a device
-                            scanCallback?.let { callback ->
-                                try {
-                                    bluetoothAdapter?.bluetoothLeScanner?.stopScan(callback)
-                                } catch (e: Exception) {
-                                    // Ignore errors when stopping scan
-                                }
-                            }
-                            if (bluetoothAdapter?.isDiscovering == true) {
-                                try {
-                                    bluetoothAdapter.cancelDiscovery()
-                                } catch (e: Exception) {
-                                    // Ignore errors when canceling discovery
-                                }
-                            }
+                        // Setup connection state receiver
+                        connectionReceiver = object : BroadcastReceiver() {
+                            override fun onReceive(ctx: Context?, intent: Intent?) {
+                                when (intent?.action) {
+                                    HidService.ACTION_CONNECTION_STATE -> {
+                                        val connected = intent.getBooleanExtra(HidService.EXTRA_CONNECTED, false)
+                                        val deviceAddr = intent.getStringExtra(HidService.EXTRA_DEVICE)
+                                        val error = intent.getStringExtra(HidService.EXTRA_ERROR)
 
-                            if (!isPaired) {
-                                try {
-                                    deviceMap[name]?.createBond()
-                                    state = ConnectionState.Connecting
-                                } catch (e: Exception) {
-                                    // Continue to connect even if pairing fails
-                                }
-                            }
-
-                            val device = deviceMap[name]
-                            if (device != null) {
-                                state = ConnectionState.Connecting
-                                connectionStateViewModel.setConnecting()
-
-                                // FIXED: Use enhanced connection with validation
-                                connectToDeviceWithValidation(
-                                    device,
-                                    name,
-                                    hidService,
-                                    connectionStateViewModel,
-                                    settingsStore,
-                                    {
-                                        state = ConnectionState.Connected(name)
-                                        coroutineScope.launch {
-                                            delay(1000)
-                                            onOpenControls()
+                                        if (deviceAddr == device.address) {
+                                            if (connected) {
+                                                Log.d("ConnectScreen", "Device connected successfully")
+                                                state = ConnectionState.Connected(deviceName)
+                                                cleanup()
+                                            } else if (error != null) {
+                                                Log.e("ConnectScreen", "Connection failed: $error")
+                                                state = ConnectionState.Error(error)
+                                                cleanup()
+                                            }
                                         }
-                                    },
-                                    { errorMessage: String ->
-                                        state = ConnectionState.Error("Connection failed: $errorMessage")
-                                    },
-                                    {
-                                        state = ConnectionState.Error("Connection timed out after 5 seconds")
                                     }
-                                )
+                                }
                             }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (isPaired) {
-                                WearIcon(Icons.Filled.Bluetooth, contentDescription = "Paired", modifier = Modifier.size(20.dp))
-                            } else {
-                                WearIcon(Icons.Filled.BluetoothSearching, contentDescription = "Discovered", modifier = Modifier.size(20.dp))
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            WearText(name, modifier = Modifier.weight(1f))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            WearText("$rssi dBm", style = MaterialTheme.typography.caption2)
                         }
+
+                        context.registerReceiver(connectionReceiver, IntentFilter(HidService.ACTION_CONNECTION_STATE))
+
+                        // Attempt connection
+                        HidClient.connect(device)
+
+                        // Connection timeout - reduced to 15 seconds
+                        delay(15000)
+                        if (state is ConnectionState.Connecting) {
+                            Log.w("ConnectScreen", "Connection timeout")
+                            state = ConnectionState.Error("Connection timeout - device may be out of range")
+                            cleanup()
+                        }
+
+                    } catch (e: CancellationException) {
+                        Log.d("ConnectScreen", "Connection cancelled")
+                        cleanup()
+                    } catch (e: Exception) {
+                        Log.e("ConnectScreen", "Connection error: ${e.message}")
+                        state = ConnectionState.Error("Connection failed: ${e.message}")
+                        cleanup()
                     }
                 }
+            } else {
+                Log.w("ConnectScreen", "Already connecting")
             }
         }
     }
+
+    ConnectToDeviceScreenContent(
+        state = state,
+        deviceList = deviceMap.values.toList(),
+        onScan = startScan,
+        onConnect = connectToDevice,
+        onOpenControls = onOpenControls,
+        onEnableBluetooth = {
+            bluetoothEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+        }
+    )
 }

@@ -74,11 +74,6 @@ fun MediaScreen(isDeviceConnected: Boolean = false) {
     val minDimension = min(configuration.screenWidthDp, configuration.screenHeightDp)
     val buttonSize = (minDimension / 4).dp
 
-    // Set input mode to MEDIA when screen loads
-    LaunchedEffect(Unit) {
-        HidClient.instance()?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.MEDIA)
-    }
-
     // Auto-hide action feedback after 1 second
     LaunchedEffect(actionFeedbackVisible) {
         if (actionFeedbackVisible) {
@@ -111,7 +106,6 @@ fun MediaScreen(isDeviceConnected: Boolean = false) {
                 }
             } else {
                 // Fallback to HID if no system media session available
-                HidClient.instance()?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.MEDIA)
                 hidAction()
             }
 
@@ -120,7 +114,6 @@ fun MediaScreen(isDeviceConnected: Boolean = false) {
         } catch (e: SecurityException) {
             // If we don't have permission, fallback to HID
             try {
-                HidClient.instance()?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.MEDIA)
                 hidAction()
                 lastAction = action
                 actionFeedbackVisible = true
@@ -131,7 +124,6 @@ fun MediaScreen(isDeviceConnected: Boolean = false) {
         } catch (e: Exception) {
             // General error, try HID fallback
             try {
-                HidClient.instance()?.setInputMode(com.example.inmocontrol_v2.hid.HidService.InputMode.MEDIA)
                 hidAction()
                 lastAction = action
                 actionFeedbackVisible = true

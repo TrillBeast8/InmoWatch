@@ -99,35 +99,72 @@ fun MouseCalibrationScreen(onNavigate: (String) -> Unit = {}) {
                     Slider(
                         value = calibrationState.value.sensitivity,
                         onValueChange = { calibrationState.value.sensitivity = it },
-                        valueRange = 0.5f..2.0f,
-                        steps = 3
+                        valueRange = 0.1f..3.0f,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Text("Sensitivity: %.2f".format(calibrationState.value.sensitivity))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { step++ }) { Text("Next") }
-                }
-                4 -> {
-                    Text("Calibration Complete!")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = {
-                        scope.launch {
-                            settingsStore.saveCalibration(
-                                calibrationState.value.minX,
-                                calibrationState.value.minY,
-                                calibrationState.value.maxX,
-                                calibrationState.value.maxY,
-                                calibrationState.value.centerX,
-                                calibrationState.value.centerY,
-                                calibrationState.value.sensitivity
-                            )
+                    Text("Sensitivity: ${String.format("%.2f", calibrationState.value.sensitivity)}")
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            scope.launch {
+                                // Save calibration and baselines
+                                settingsStore.saveCalibration(
+                                    calibrationState.value.minX,
+                                    calibrationState.value.minY,
+                                    calibrationState.value.maxX,
+                                    calibrationState.value.maxY,
+                                    calibrationState.value.centerX,
+                                    calibrationState.value.centerY,
+                                    calibrationState.value.sensitivity
+                                )
+                                // Save current sensor readings as baselines
+                                settingsStore.setBaselineGyro(gyroValues.value)
+                                settingsStore.setBaselineAccel(accelValues.value)
+                                feedbackMessage = "Calibration saved!"
+                            }
+                        }) {
+                            Text("Save")
                         }
-                        onNavigate("home")
-                    }) { Text("Save & Exit") }
+
+                        Button(onClick = {
+                            onNavigate("settings")
+                        }) {
+                            Text("Back")
+                        }
+                    }
+                }
+                else -> {
+                    Text("Calibration Complete!")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { onNavigate("settings") }) {
+                        Text("Back to Settings")
+                    }
                 }
             }
+
             if (feedbackMessage.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(feedbackMessage, color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(feedbackMessage, color = MaterialTheme.colorScheme.primary)
+                LaunchedEffect(feedbackMessage) {
+                    kotlinx.coroutines.delay(2000)
+                    feedbackMessage = ""
+                }
+            }
+
+            // Show current sensor values for debugging
+            if (step < 4) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Gyro: ${String.format("%.2f, %.2f, %.2f",
+                        gyroValues.value[0], gyroValues.value[1], gyroValues.value[2])}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    "Accel: ${String.format("%.2f, %.2f, %.2f",
+                        accelValues.value[0], accelValues.value[1], accelValues.value[2])}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }
