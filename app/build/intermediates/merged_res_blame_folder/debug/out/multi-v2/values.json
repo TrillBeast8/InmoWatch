@@ -4,41 +4,26 @@
             "outputFile": "com.example.inmocontrol_v2.app-mergeDebugResources-60:/values/values.xml",
             "map": [
                 {
-                    "source": "D:\\Users\\duqhildr\\AndroidStudioProjects\\InmoControl_AndroidProject_v4\\app\\src\\main\\res\\values\\colors.xml",
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\7cbfad4b514e55dce7bb918ef8545941\\transformed\\navigation-runtime-2.7.5\\res\\values\\values.xml",
                     "from": {
-                        "startLines": "0,0",
-                        "startColumns": "11,46",
-                        "startOffsets": "11,46",
-                        "endColumns": "46,81",
-                        "endOffsets": "46,81"
+                        "startLines": "2,3,10,13",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,108,412,527",
+                        "endLines": "2,9,12,15",
+                        "endColumns": "52,24,24,24",
+                        "endOffsets": "103,407,522,637"
                     },
                     "to": {
-                        "startLines": "5,10",
-                        "startColumns": "4,4",
-                        "startOffsets": "370,673",
-                        "endColumns": "39,39",
-                        "endOffsets": "405,708"
+                        "startLines": "76,212,356,359",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "4719,13226,18558,18673",
+                        "endLines": "76,218,358,361",
+                        "endColumns": "52,24,24,24",
+                        "endOffsets": "4767,13525,18668,18783"
                     }
                 },
                 {
-                    "source": "D:\\Users\\duqhildr\\AndroidStudioProjects\\InmoControl_AndroidProject_v4\\app\\src\\main\\res\\values\\strings.xml",
-                    "from": {
-                        "startLines": "0",
-                        "startColumns": "11",
-                        "startOffsets": "11",
-                        "endColumns": "55",
-                        "endOffsets": "55"
-                    },
-                    "to": {
-                        "startLines": "103",
-                        "startColumns": "4",
-                        "startOffsets": "6196",
-                        "endColumns": "48",
-                        "endOffsets": "6240"
-                    }
-                },
-                {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\92ee0fa615041f345f337659431e9eb3\\transformed\\savedstate-1.2.1\\res\\values\\values.xml",
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\92ee0fa615041f345f337659431e9eb3\\transformed\\savedstate-1.2.1\\res\\values\\values.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
@@ -55,43 +40,7 @@
                     }
                 },
                 {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\68e0bc3f7e52679be18ac1c2a1a2531f\\transformed\\core-1.12.0\\res\\values\\values.xml",
-                    "from": {
-                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,98,99,103,104,105,106,112,122,155,176,209",
-                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
-                        "startOffsets": "55,115,187,275,340,406,475,538,608,676,748,818,879,953,1026,1087,1148,1210,1274,1336,1397,1465,1565,1625,1691,1764,1833,1890,1942,2004,2076,2152,4127,4162,4197,4252,4315,4370,4428,4486,4547,4610,4667,4718,4768,4829,4886,4952,4986,5021,5056,5126,5193,5265,5334,5403,5477,5549,5637,5708,5825,6026,6136,6337,6466,6538,6605,6808,7109,8840,9521,10203",
-                        "endLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,97,98,102,103,104,105,111,121,154,175,208,214",
-                        "endColumns": "59,71,87,64,65,68,62,69,67,71,69,60,73,72,60,60,61,63,61,60,67,99,59,65,72,68,56,51,61,71,75,64,34,34,54,62,54,57,57,60,62,56,50,49,60,56,65,33,34,34,69,66,71,68,68,73,71,87,70,116,12,109,12,128,71,66,24,24,24,24,24,24",
-                        "endOffsets": "110,182,270,335,401,470,533,603,671,743,813,874,948,1021,1082,1143,1205,1269,1331,1392,1460,1560,1620,1686,1759,1828,1885,1937,1999,2071,2147,2212,4157,4192,4247,4310,4365,4423,4481,4542,4605,4662,4713,4763,4824,4881,4947,4981,5016,5051,5121,5188,5260,5329,5398,5472,5544,5632,5703,5820,6021,6131,6332,6461,6533,6600,6803,7104,8835,9516,10198,10365"
-                    },
-                    "to": {
-                        "startLines": "2,3,4,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,74,75,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,101,108,109,110,111,112,113,114,170,199,200,204,205,209,210,211,219,225,235,268,289,322",
-                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
-                        "startOffsets": "150,210,282,410,475,541,610,713,783,851,923,993,1054,1128,1201,1262,1323,1385,1449,1511,1572,1640,1740,1800,1866,1939,2008,2065,2117,2179,2251,2327,4649,4684,4881,4936,4999,5054,5112,5170,5231,5294,5351,5402,5452,5513,5570,5636,5670,5705,6043,6568,6635,6707,6776,6845,6919,6991,10720,12329,12446,12647,12757,12958,13087,13159,13530,13733,14034,15765,16446,17128",
-                        "endLines": "2,3,4,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,74,75,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,101,108,109,110,111,112,113,114,170,199,203,204,208,209,210,211,224,234,267,288,321,327",
-                        "endColumns": "59,71,87,64,65,68,62,69,67,71,69,60,73,72,60,60,61,63,61,60,67,99,59,65,72,68,56,51,61,71,75,64,34,34,54,62,54,57,57,60,62,56,50,49,60,56,65,33,34,34,69,66,71,68,68,73,71,87,70,116,12,109,12,128,71,66,24,24,24,24,24,24",
-                        "endOffsets": "205,277,365,470,536,605,668,778,846,918,988,1049,1123,1196,1257,1318,1380,1444,1506,1567,1635,1735,1795,1861,1934,2003,2060,2112,2174,2246,2322,2387,4679,4714,4931,4994,5049,5107,5165,5226,5289,5346,5397,5447,5508,5565,5631,5665,5700,5735,6108,6630,6702,6771,6840,6914,6986,7074,10786,12441,12642,12752,12953,13082,13154,13221,13728,14029,15760,16441,17123,17290"
-                    }
-                },
-                {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\cc2034aa3a576b045e14de562e113af4\\transformed\\lifecycle-runtime-2.6.2\\res\\values\\values.xml",
-                    "from": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "55",
-                        "endColumns": "42",
-                        "endOffsets": "93"
-                    },
-                    "to": {
-                        "startLines": "96",
-                        "startColumns": "4",
-                        "startOffsets": "5783",
-                        "endColumns": "42",
-                        "endOffsets": "5821"
-                    }
-                },
-                {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\ec95d86a654b9114bb671ed729851d17\\transformed\\material3-1.1.2\\res\\values\\values.xml",
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\ec95d86a654b9114bb671ed729851d17\\transformed\\material3-1.1.2\\res\\values\\values.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,21,22,23,24,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -110,7 +59,162 @@
                     }
                 },
                 {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\482e04ab278b3df43f02878c9045317b\\transformed\\ui-release\\res\\values\\values.xml",
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\859cdc008aea1766548eb955bc9e4603\\transformed\\startup-runtime-1.1.1\\res\\values\\values.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "82",
+                        "endOffsets": "133"
+                    },
+                    "to": {
+                        "startLines": "102",
+                        "startColumns": "4",
+                        "startOffsets": "6113",
+                        "endColumns": "82",
+                        "endOffsets": "6191"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\68e0bc3f7e52679be18ac1c2a1a2531f\\transformed\\core-1.12.0\\res\\values\\values.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,98,99,103,104,105,106,112,122,155,176,209",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,115,187,275,340,406,475,538,608,676,748,818,879,953,1026,1087,1148,1210,1274,1336,1397,1465,1565,1625,1691,1764,1833,1890,1942,2004,2076,2152,4127,4162,4197,4252,4315,4370,4428,4486,4547,4610,4667,4718,4768,4829,4886,4952,4986,5021,5056,5126,5193,5265,5334,5403,5477,5549,5637,5708,5825,6026,6136,6337,6466,6538,6605,6808,7109,8840,9521,10203",
+                        "endLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,97,98,102,103,104,105,111,121,154,175,208,214",
+                        "endColumns": "59,71,87,64,65,68,62,69,67,71,69,60,73,72,60,60,61,63,61,60,67,99,59,65,72,68,56,51,61,71,75,64,34,34,54,62,54,57,57,60,62,56,50,49,60,56,65,33,34,34,69,66,71,68,68,73,71,87,70,116,12,109,12,128,71,66,24,24,24,24,24,24",
+                        "endOffsets": "110,182,270,335,401,470,533,603,671,743,813,874,948,1021,1082,1143,1205,1269,1331,1392,1460,1560,1620,1686,1759,1828,1885,1937,1999,2071,2147,2212,4157,4192,4247,4310,4365,4423,4481,4542,4605,4662,4713,4763,4824,4881,4947,4981,5016,5051,5121,5188,5260,5329,5398,5472,5544,5632,5703,5820,6021,6131,6332,6461,6533,6600,6803,7104,8835,9516,10198,10365"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,74,75,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,101,108,109,110,111,112,113,114,170,199,200,204,205,209,210,211,219,225,235,268,289,322",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "150,210,282,410,475,541,610,713,783,851,923,993,1054,1128,1201,1262,1323,1385,1449,1511,1572,1640,1740,1800,1866,1939,2008,2065,2117,2179,2251,2327,4649,4684,4881,4936,4999,5054,5112,5170,5231,5294,5351,5402,5452,5513,5570,5636,5670,5705,6043,6568,6635,6707,6776,6845,6919,6991,10720,12329,12446,12647,12757,12958,13087,13159,13530,13733,14034,15765,16446,17128",
+                        "endLines": "2,3,4,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,74,75,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,101,108,109,110,111,112,113,114,170,199,203,204,208,209,210,211,224,234,267,288,321,327",
+                        "endColumns": "59,71,87,64,65,68,62,69,67,71,69,60,73,72,60,60,61,63,61,60,67,99,59,65,72,68,56,51,61,71,75,64,34,34,54,62,54,57,57,60,62,56,50,49,60,56,65,33,34,34,69,66,71,68,68,73,71,87,70,116,12,109,12,128,71,66,24,24,24,24,24,24",
+                        "endOffsets": "205,277,365,470,536,605,668,778,846,918,988,1049,1123,1196,1257,1318,1380,1444,1506,1567,1635,1735,1795,1861,1934,2003,2060,2112,2174,2246,2322,2387,4679,4714,4931,4994,5049,5107,5165,5226,5289,5346,5397,5447,5508,5565,5631,5665,5700,5735,6108,6630,6702,6771,6840,6914,6986,7074,10786,12441,12642,12752,12953,13082,13154,13221,13728,14029,15760,16441,17123,17290"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\duran\\AndroidStudioProjects\\InmoWatch\\app\\src\\main\\res\\values\\colors.xml",
+                    "from": {
+                        "startLines": "0,0",
+                        "startColumns": "11,46",
+                        "startOffsets": "11,46",
+                        "endColumns": "46,81",
+                        "endOffsets": "46,81"
+                    },
+                    "to": {
+                        "startLines": "5,10",
+                        "startColumns": "4,4",
+                        "startOffsets": "370,673",
+                        "endColumns": "39,39",
+                        "endOffsets": "405,708"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\04cb2a0f8700f99c5b890b43f7601b8b\\transformed\\activity-1.8.2\\res\\values\\values.xml",
+                    "from": {
+                        "startLines": "2,3",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,97",
+                        "endColumns": "41,59",
+                        "endOffsets": "92,152"
+                    },
+                    "to": {
+                        "startLines": "78,97",
+                        "startColumns": "4,4",
+                        "startOffsets": "4839,5826",
+                        "endColumns": "41,59",
+                        "endOffsets": "4876,5881"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\duran\\AndroidStudioProjects\\InmoWatch\\app\\src\\main\\res\\values\\strings.xml",
+                    "from": {
+                        "startLines": "0",
+                        "startColumns": "11",
+                        "startOffsets": "11",
+                        "endColumns": "55",
+                        "endOffsets": "55"
+                    },
+                    "to": {
+                        "startLines": "103",
+                        "startColumns": "4",
+                        "startOffsets": "6196",
+                        "endColumns": "48",
+                        "endOffsets": "6240"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\5e0515dfc863899a9c3fa23876d75312\\transformed\\lifecycle-viewmodel-2.6.2\\res\\values\\values.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "49",
+                        "endOffsets": "100"
+                    },
+                    "to": {
+                        "startLines": "99",
+                        "startColumns": "4",
+                        "startOffsets": "5940",
+                        "endColumns": "49",
+                        "endOffsets": "5985"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\cc2034aa3a576b045e14de562e113af4\\transformed\\lifecycle-runtime-2.6.2\\res\\values\\values.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "42",
+                        "endOffsets": "93"
+                    },
+                    "to": {
+                        "startLines": "96",
+                        "startColumns": "4",
+                        "startOffsets": "5783",
+                        "endColumns": "42",
+                        "endOffsets": "5821"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\09de5c9fa3889868461d1e8ff07b7294\\transformed\\core-viewtree-1.0.0\\res\\values\\values.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "42",
+                        "endOffsets": "93"
+                    },
+                    "to": {
+                        "startLines": "95",
+                        "startColumns": "4",
+                        "startOffsets": "5740",
+                        "endColumns": "42",
+                        "endOffsets": "5778"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\902353899e9c09912a25a7eb578a3a13\\transformed\\customview-poolingcontainer-1.0.0\\res\\values\\values.xml",
+                    "from": {
+                        "startLines": "2,3",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,109",
+                        "endColumns": "53,66",
+                        "endOffsets": "104,171"
+                    },
+                    "to": {
+                        "startLines": "73,77",
+                        "startColumns": "4,4",
+                        "startOffsets": "4595,4772",
+                        "endColumns": "53,66",
+                        "endOffsets": "4644,4834"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\482e04ab278b3df43f02878c9045317b\\transformed\\ui-release\\res\\values\\values.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,60,63",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -129,41 +233,7 @@
                     }
                 },
                 {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\859cdc008aea1766548eb955bc9e4603\\transformed\\startup-runtime-1.1.1\\res\\values\\values.xml",
-                    "from": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "55",
-                        "endColumns": "82",
-                        "endOffsets": "133"
-                    },
-                    "to": {
-                        "startLines": "102",
-                        "startColumns": "4",
-                        "startOffsets": "6113",
-                        "endColumns": "82",
-                        "endOffsets": "6191"
-                    }
-                },
-                {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\04cb2a0f8700f99c5b890b43f7601b8b\\transformed\\activity-1.8.2\\res\\values\\values.xml",
-                    "from": {
-                        "startLines": "2,3",
-                        "startColumns": "4,4",
-                        "startOffsets": "55,97",
-                        "endColumns": "41,59",
-                        "endOffsets": "92,152"
-                    },
-                    "to": {
-                        "startLines": "78,97",
-                        "startColumns": "4,4",
-                        "startOffsets": "4839,5826",
-                        "endColumns": "41,59",
-                        "endOffsets": "4876,5881"
-                    }
-                },
-                {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\7d846af3229fe809d21a15e47171dff4\\transformed\\navigation-common-2.7.5\\res\\values\\values.xml",
+                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\7d846af3229fe809d21a15e47171dff4\\transformed\\navigation-common-2.7.5\\res\\values\\values.xml",
                     "from": {
                         "startLines": "2,15,21,27,30",
                         "startColumns": "4,4,4,4,4",
@@ -179,76 +249,6 @@
                         "endLines": "340,346,352,355,366",
                         "endColumns": "24,24,24,24,24",
                         "endOffsets": "17929,18173,18420,18553,18965"
-                    }
-                },
-                {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\902353899e9c09912a25a7eb578a3a13\\transformed\\customview-poolingcontainer-1.0.0\\res\\values\\values.xml",
-                    "from": {
-                        "startLines": "2,3",
-                        "startColumns": "4,4",
-                        "startOffsets": "55,109",
-                        "endColumns": "53,66",
-                        "endOffsets": "104,171"
-                    },
-                    "to": {
-                        "startLines": "73,77",
-                        "startColumns": "4,4",
-                        "startOffsets": "4595,4772",
-                        "endColumns": "53,66",
-                        "endOffsets": "4644,4834"
-                    }
-                },
-                {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\09de5c9fa3889868461d1e8ff07b7294\\transformed\\core-viewtree-1.0.0\\res\\values\\values.xml",
-                    "from": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "55",
-                        "endColumns": "42",
-                        "endOffsets": "93"
-                    },
-                    "to": {
-                        "startLines": "95",
-                        "startColumns": "4",
-                        "startOffsets": "5740",
-                        "endColumns": "42",
-                        "endOffsets": "5778"
-                    }
-                },
-                {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\5e0515dfc863899a9c3fa23876d75312\\transformed\\lifecycle-viewmodel-2.6.2\\res\\values\\values.xml",
-                    "from": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "55",
-                        "endColumns": "49",
-                        "endOffsets": "100"
-                    },
-                    "to": {
-                        "startLines": "99",
-                        "startColumns": "4",
-                        "startOffsets": "5940",
-                        "endColumns": "49",
-                        "endOffsets": "5985"
-                    }
-                },
-                {
-                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\7cbfad4b514e55dce7bb918ef8545941\\transformed\\navigation-runtime-2.7.5\\res\\values\\values.xml",
-                    "from": {
-                        "startLines": "2,3,10,13",
-                        "startColumns": "4,4,4,4",
-                        "startOffsets": "55,108,412,527",
-                        "endLines": "2,9,12,15",
-                        "endColumns": "52,24,24,24",
-                        "endOffsets": "103,407,522,637"
-                    },
-                    "to": {
-                        "startLines": "76,212,356,359",
-                        "startColumns": "4,4,4,4",
-                        "startOffsets": "4719,13226,18558,18673",
-                        "endLines": "76,218,358,361",
-                        "endColumns": "52,24,24,24",
-                        "endOffsets": "4767,13525,18668,18783"
                     }
                 }
             ]

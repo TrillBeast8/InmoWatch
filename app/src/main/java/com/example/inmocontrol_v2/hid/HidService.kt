@@ -597,10 +597,154 @@ class HidService : Service() {
         }
     }
 
+    // Connection state tracking
+    private var bluetoothGatt: BluetoothGatt? = null
+    private var isConnecting = false
+    private var isConnected = false
+
+    // GATT callback for real connection handling
+    private val gattCallback = object : BluetoothGattCallback() {
+        override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
+            super.onConnectionStateChange(gatt, status, newState)
+
+            when (newState) {
+                BluetoothProfile.STATE_CONNECTED -> {
+                    Log.d("HidService", "Device connected successfully")
+                    isConnected = true
+                    isConnecting = false
+                    connectionStartTime = System.currentTimeMillis()
+                    lastActivityTime = System.currentTimeMillis()
+
+                    // Discover services
+                    if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        gatt?.discoverServices()
+                    }
+
+                    // Start connection monitoring for stability
+                    startConnectionMonitoring()
+                    startAdaptiveHeartbeat()
+                }
+                BluetoothProfile.STATE_DISCONNECTED -> {
+                    Log.d("HidService", "Device disconnected")
+                    isConnected = false
+                    isConnecting = false
+
+                    // Clean up connection resources
+                    bluetoothGatt?.close()
+                    bluetoothGatt = null
+
+                    // Stop monitoring jobs
+                    connectionMonitorJob?.cancel()
+                    heartbeatJob?.cancel()
+
+                    // Attempt reconnection if it was unexpected
+                    if (connectedDevice != null) {
+                        Log.d("HidService", "Unexpected disconnection, attempting reconnect")
+                        startSmartReconnection()
+                    }
+                }
+                BluetoothProfile.STATE_CONNECTING -> {
+                    Log.d("HidService", "Device connecting...")
+                    isConnecting = true
+                }
+                BluetoothProfile.STATE_DISCONNECTING -> {
+                    Log.d("HidService", "Device disconnecting...")
+                    isConnecting = false
+                }
+            }
+        }
+
+        override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+            super.onServicesDiscovered(gatt, status)
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.d("HidService", "Services discovered successfully")
+                // Services discovered, connection is fully established
+                isStableConnection = true
+            } else {
+                Log.w("HidService", "Service discovery failed with status: $status")
+            }
+        }
+
+        override fun onCharacteristicChanged(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {
+            super.onCharacteristicChanged(gatt, characteristic)
+            lastActivityTime = System.currentTimeMillis()
+            packetsAcknowledged++
+        }
+    }
+
     // Public method to connect to a Bluetooth device
     fun connect(device: BluetoothDevice) {
+        if (isConnecting) {
+            Log.d("HidService", "Already connecting, ignoring duplicate connect request")
+            return
+        }
+
+        if (isConnected && connectedDevice?.address == device.address) {
+            Log.d("HidService", "Already connected to this device")
+            return
+        }
+
+        // Disconnect from any existing connection
+        disconnect()
+
         connectedDevice = device
-        Log.d("HidService", "Connected to device: $device")
+        isConnecting = true
+        isConnected = false
+        isStableConnection = false
+        connectionStartTime = System.currentTimeMillis()
+
+        Log.d("HidService", "Establishing GATT connection to device: ${device.address}")
+
+        // Check permissions and establish GATT connection
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+            try {
+                bluetoothGatt = device.connectGatt(this, false, gattCallback)
+                if (bluetoothGatt == null) {
+                    Log.e("HidService", "Failed to create GATT connection")
+                    isConnecting = false
+                    connectedDevice = null
+                }
+            } catch (e: Exception) {
+                Log.e("HidService", "Exception during GATT connection: ${e.message}")
+                isConnecting = false
+                connectedDevice = null
+            }
+        } else {
+            Log.e("HidService", "BLUETOOTH_CONNECT permission not granted")
+            isConnecting = false
+            connectedDevice = null
+        }
+    }
+
+    fun disconnect() {
+        Log.d("HidService", "Disconnecting from device")
+
+        // Cancel any ongoing jobs
+        reconnectJob?.cancel()
+        connectionMonitorJob?.cancel()
+        heartbeatJob?.cancel()
+
+        // Close GATT connection
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+            bluetoothGatt?.disconnect()
+            bluetoothGatt?.close()
+        }
+
+        bluetoothGatt = null
+        connectedDevice = null
+        isConnected = false
+        isConnecting = false
+        isStableConnection = false
+    }
+
+    fun getConnectionState(): Boolean {
+        return isConnected && bluetoothGatt != null
+    }
+
+    // Consolidated device connection check method
+    fun isDeviceConnected(): Boolean {
+        return isConnected && bluetoothGatt != null && connectedDevice != null
     }
 
     // Connection stability monitoring functions (referenced but missing)
@@ -677,11 +821,11 @@ class HidService : Service() {
                 var attempt = 1
 
                 while (attempt <= maxReconnectAttempts && isActive) {
-                    Log.d("HidService", "Reconnection attempt $attempt/$maxReconnectAttempts to ${device.name}")
-                    sendReconnectStatusBroadcast("RECONNECTING", attempt, device.name)
-
                     try {
                         if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                            Log.d("HidService", "Reconnection attempt $attempt/$maxReconnectAttempts to ${device.address}")
+                            sendReconnectStatusBroadcast("RECONNECTING", attempt, device.address)
+
                             // Create GATT client connection for reconnection
                             reconnectGattCallback = object : BluetoothGattCallback() {
                                 override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
@@ -689,13 +833,17 @@ class HidService : Service() {
                                         BluetoothProfile.STATE_CONNECTED -> {
                                             Log.d("HidService", "Reconnection successful!")
                                             connectedDevice = device
-                                            sendReconnectStatusBroadcast("CONNECTED", attempt, device.name)
-                                            gatt?.disconnect()
+                                            sendReconnectStatusBroadcast("CONNECTED", attempt, device.address)
+                                            if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                                                gatt?.disconnect()
+                                            }
                                             startConnectionMonitoring()
                                             startAdaptiveHeartbeat()
                                         }
                                         BluetoothProfile.STATE_DISCONNECTED -> {
-                                            gatt?.close()
+                                            if (ContextCompat.checkSelfPermission(this@HidService, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                                                gatt?.close()
+                                            }
                                         }
                                     }
                                 }
@@ -708,7 +856,7 @@ class HidService : Service() {
 
                             if (connectedDevice != null) {
                                 Log.d("HidService", "Reconnection successful after $attempt attempts")
-                                sendReconnectStatusBroadcast("SUCCESS", attempt, device.name)
+                                sendReconnectStatusBroadcast("SUCCESS", attempt, device.address)
                                 return@launch
                             }
                         }
@@ -723,13 +871,12 @@ class HidService : Service() {
                 }
 
                 Log.e("HidService", "All reconnection attempts failed")
-                sendReconnectStatusBroadcast("FAILED", maxReconnectAttempts, device.name)
+                sendReconnectStatusBroadcast("FAILED", maxReconnectAttempts, device.address)
             }
         }
     }
 
-    // Get connection status for UI
-    fun isDeviceConnected(): Boolean = connectedDevice != null
+    // Get connection status for UI - Consolidated methods to avoid duplication
     fun getConnectedDevice(): BluetoothDevice? = connectedDevice
     fun getCurrentMode(): InputMode = currentMode
     fun isConnectionStable(): Boolean = isStableConnection
