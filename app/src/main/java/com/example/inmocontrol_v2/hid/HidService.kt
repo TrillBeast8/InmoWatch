@@ -1,262 +1,482 @@
 package com.example.inmocontrol_v2.hid
 
 import android.app.Service
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import kotlinx.coroutines.*
-import com.example.inmocontrol_v2.ui.screens.DeviceProfile
-import com.example.inmocontrol_v2.bluetooth.BluetoothHidManager
+import androidx.annotation.MainThread
+import com.example.inmocontrol_v2.bluetooth.HidDeviceApp
+import com.example.inmocontrol_v2.bluetooth.HidDeviceProfile
 import com.example.inmocontrol_v2.bluetooth.HidInputManager
-import com.example.inmocontrol_v2.bluetooth.HidInputManager.MouseButton
-import com.example.inmocontrol_v2.bluetooth.HidInputManager.MediaKey
+import com.example.inmocontrol_v2.bluetooth.InputProfile
+import com.example.inmocontrol_v2.bluetooth.GenericInputProfile
+import com.example.inmocontrol_v2.bluetooth.InmoAir2InputProfile
+import com.example.inmocontrol_v2.data.DeviceProfile
 
-class HidService : Service(), BluetoothHidManager.BluetoothHidCallback {
-
-    enum class InputMode { MOUSE, TOUCHPAD, KEYBOARD, MEDIA, DPAD }
-
-    var currentDeviceProfile: DeviceProfile? = null
-    private var currentMode: InputMode = InputMode.MOUSE
-    private val binder = LocalBinder()
-
-    private lateinit var bluetoothHidManager: BluetoothHidManager
-    private lateinit var hidInputManager: HidInputManager
-    private var connectedDevice: BluetoothDevice? = null
-    private var isServiceReady = false
-    private var isConnecting = false
-    private var isConnected = false
-
-    // Optimized coroutine scope with limited concurrency
-    private val serviceScope = CoroutineScope(
-        Dispatchers.IO + SupervisorJob() +
-        CoroutineExceptionHandler { _, throwable ->
-            Log.e("HidService", "Coroutine error", throwable)
-        }
-    )
+/**
+ * HID Service implementation - optimized for fast initialization and seamless connections
+ * Based on proven WearMouse pattern to eliminate delays and connectivity issues
+ */
+class HidService : Service(), HidServiceApi {
 
     companion object {
-        const val ACTION_MODE_CHANGED = "com.example.inmocontrol_v2.ACTION_MODE_CHANGED"
-        const val EXTRA_MODE = "mode"
-        const val ACTION_CONNECTION_STATE = "com.example.inmocontrol_v2.CONNECTION_STATE"
-        const val EXTRA_CONNECTED = "connected"
-        const val EXTRA_DEVICE = "device"
-        const val EXTRA_ERROR = "error"
+        private const val TAG = "HidService"
     }
 
+    // Service binder
     inner class LocalBinder : Binder() {
         fun getService(): HidService = this@HidService
     }
 
-    override fun onBind(intent: Intent?): IBinder = binder
+    // Core HID components - fast initialization
+    private lateinit var bluetoothAdapter: BluetoothAdapter
+    private lateinit var hidDeviceProfile: HidDeviceProfile
+    private lateinit var hidDeviceApp: HidDeviceApp
+    private lateinit var hidInputManager: HidInputManager
+    private lateinit var inputProfile: InputProfile
 
+    // Service state
+    override var currentDeviceProfile: DeviceProfile? = null
+    private var connectedDevice: BluetoothDevice? = null
+    private var isServiceReady = false
+    private var isAppRegistered = false
+    private var isProfileConnected = false
+
+    // Service lifecycle
     override fun onCreate() {
         super.onCreate()
-        try {
-            bluetoothHidManager = BluetoothHidManager(this, this)
-            hidInputManager = HidInputManager(bluetoothHidManager)
-            isServiceReady = true
-            Log.d("HidService", "Service initialized")
-        } catch (e: Exception) {
-            Log.e("HidService", "Failed to initialize service", e)
-        }
+        Log.d(TAG, "HidService onCreate - fast initialization")
+        initializeBluetoothComponents()
     }
+
+    override fun onBind(intent: Intent?): IBinder = LocalBinder()
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.d(TAG, "HidService onDestroy")
         cleanup()
     }
 
+    /**
+     * Fast Bluetooth initialization - no delays or retries
+     */
+    private fun initializeBluetoothComponents() {
+        try {
+            // Get Bluetooth adapter immediately
+            val bluetoothManager = getSystemService(BluetoothManager::class.java)
+            bluetoothAdapter = bluetoothManager?.adapter
+                ?: throw IllegalStateException("Bluetooth not available")
+
+            if (!bluetoothAdapter.isEnabled) {
+                Log.w(TAG, "Bluetooth is not enabled")
+                return
+            }
+
+            // Initialize HID components
+            hidDeviceProfile = HidDeviceProfile()
+            hidDeviceApp = HidDeviceApp()
+            hidInputManager = HidInputManager(hidDeviceProfile)
+            inputProfile = GenericInputProfile(hidInputManager)
+
+            // Set up listeners
+            setupListeners()
+
+            // Register HID profile immediately - no delays
+            hidDeviceProfile.registerServiceListener(this, serviceStateListener)
+
+            Log.d(TAG, "Bluetooth components initialized successfully")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize Bluetooth components", e)
+            // Notify HidClient of the error
+            HidClient.setConnectionError("Bluetooth initialization failed: ${e.message}")
+        }
+    }
+
+    /**
+     * Set up event listeners for seamless operation
+     */
+    private fun setupListeners() {
+        hidDeviceApp.setDeviceStateListener(deviceStateListener)
+        hidDeviceProfile.registerDeviceListener(profileDeviceStateListener)
+    }
+
+    /**
+     * Service state listener for HID profile connection - fast response
+     */
+    private val serviceStateListener = object : HidDeviceProfile.ServiceStateListener {
+        @MainThread
+        override fun onServiceStateChanged(proxy: BluetoothProfile?) {
+            Log.d(TAG, "HID profile service state changed: ${proxy != null}")
+
+            isProfileConnected = proxy != null
+
+            if (proxy != null) {
+                // Profile connected - register app immediately
+                isServiceReady = true
+                registerHidApp(proxy)
+            } else {
+                // Profile disconnected
+                isServiceReady = false
+                isAppRegistered = false
+            }
+
+            // Notify HidClient of profile availability immediately
+            HidClient.setHidProfileAvailable(proxy != null)
+            updateServiceReadyState()
+        }
+    }
+
+    /**
+     * Device state listener for connection events - seamless handling
+     */
+    private val deviceStateListener = object : HidDeviceApp.DeviceStateListener {
+        @MainThread
+        override fun onConnectionStateChanged(device: BluetoothDevice, state: Int) {
+            Log.d(TAG, "Device connection state changed: ${device.address} -> $state")
+
+            when (state) {
+                BluetoothProfile.STATE_CONNECTED -> {
+                    connectedDevice = device
+                    HidClient.lastConnectedDevice = device
+                    HidClient.clearError()
+                    Log.d(TAG, "Device connected successfully: ${device.address}")
+                }
+                BluetoothProfile.STATE_DISCONNECTED -> {
+                    if (connectedDevice?.address == device.address) {
+                        connectedDevice = null
+                    }
+                    Log.d(TAG, "Device disconnected: ${device.address}")
+                }
+                BluetoothProfile.STATE_CONNECTING -> {
+                    Log.d(TAG, "Device connecting: ${device.address}")
+                }
+                BluetoothProfile.STATE_DISCONNECTING -> {
+                    Log.d(TAG, "Device disconnecting: ${device.address}")
+                }
+            }
+
+            // Update connection state immediately
+            updateConnectionState()
+        }
+
+        @MainThread
+        override fun onAppStatusChanged(registered: Boolean) {
+            Log.d(TAG, "HID app status changed: $registered")
+            isAppRegistered = registered
+            updateServiceReadyState()
+        }
+    }
+
+    /**
+     * Profile device state listener for additional connection events
+     */
+    private val profileDeviceStateListener = object : HidDeviceProfile.DeviceStateListener {
+        @MainThread
+        override fun onConnectionStateChanged(device: BluetoothDevice, state: Int) {
+            Log.d(TAG, "Profile device state changed: ${device.address} -> $state")
+            // This provides additional connection state updates from the profile level
+        }
+
+        @MainThread
+        override fun onAppStatusChanged(device: BluetoothDevice, registered: Boolean) {
+            Log.d(TAG, "Profile app status changed: ${device.address} -> $registered")
+            // Additional app status updates from profile level
+        }
+    }
+
+    /**
+     * Register HID app immediately when profile is ready
+     */
+    private fun registerHidApp(proxy: BluetoothProfile) {
+        try {
+            val success = hidDeviceApp.registerApp(proxy)
+            Log.d(TAG, "HID app registration result: $success")
+
+            if (success) {
+                isAppRegistered = true
+                updateServiceReadyState()
+            } else {
+                HidClient.setConnectionError("Failed to register HID app")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register HID app", e)
+            HidClient.setConnectionError("HID app registration error: ${e.message}")
+        }
+    }
+
+    /**
+     * Update service ready state and notify clients
+     */
+    private fun updateServiceReadyState() {
+        val wasReady = isServiceReady
+        isServiceReady = isProfileConnected && isAppRegistered
+
+        if (isServiceReady != wasReady) {
+            Log.d(TAG, "Service ready state changed: $isServiceReady")
+            // The HidClient will pick up this change through its StateFlow monitoring
+        }
+    }
+
+    /**
+     * Update connection state and notify clients
+     */
+    private fun updateConnectionState() {
+        // HidClient will automatically pick up connection state changes
+        // through its StateFlow monitoring and the service ready state
+    }
+
+    /**
+     * Cleanup resources
+     */
     private fun cleanup() {
         try {
-            serviceScope.cancel()
-            if (::bluetoothHidManager.isInitialized) {
-                bluetoothHidManager.cleanup()
-            }
-            connectedDevice = null
+            hidDeviceApp.unregisterApp()
+            hidDeviceProfile.unregisterServiceListener()
             isServiceReady = false
+            isAppRegistered = false
+            isProfileConnected = false
+            connectedDevice = null
         } catch (e: Exception) {
-            Log.e("HidService", "Cleanup error", e)
+            Log.e(TAG, "Error during cleanup", e)
         }
     }
 
-    // BluetoothHidManager.BluetoothHidCallback implementation
-    override fun onConnectionStateChanged(connected: Boolean, device: BluetoothDevice?) {
-        isConnected = connected
-        isConnecting = false
-        connectedDevice = if (connected) device else null
+    // HidServiceApi implementation
+    override fun isReady(): Boolean = isServiceReady && isAppRegistered
 
-        sendBroadcast(Intent(ACTION_CONNECTION_STATE).apply {
-            putExtra(EXTRA_CONNECTED, connected)
-            putExtra(EXTRA_DEVICE, device?.address)
-        })
-    }
+    override fun isDeviceConnected(): Boolean = connectedDevice != null
 
-    override fun onServiceDiscovered(success: Boolean) {
-        Log.d("HidService", "Service discovery: $success")
-    }
-
-    override fun onCharacteristicWrite(success: Boolean) {
-        if (!success) Log.w("HidService", "Write failed")
-    }
-
-    override fun onError(error: String) {
-        Log.e("HidService", "Error: $error")
-        isConnecting = false
-        sendBroadcast(Intent(ACTION_CONNECTION_STATE).apply {
-            putExtra(EXTRA_CONNECTED, false)
-            putExtra(EXTRA_ERROR, error)
-        })
-    }
-
-    // Connection methods
-    fun connect(device: BluetoothDevice) {
-        if (!isServiceReady || isConnecting) return
-        if (isConnected && connectedDevice?.address == device.address) return
-
-        disconnect()
-        isConnecting = true
-        bluetoothHidManager.connectToDevice(device)
-    }
-
-    fun disconnect() {
-        isConnecting = false
-        isConnected = false
-        bluetoothHidManager.disconnect()
-        connectedDevice = null
-    }
-
-    fun isDeviceConnected(): Boolean = isConnected && bluetoothHidManager.isDeviceConnected()
-
-    // Input methods - optimized for memory efficiency
-    fun moveMouse(dx: Int, dy: Int) {
-        if (currentMode in arrayOf(InputMode.MOUSE, InputMode.TOUCHPAD)) {
-            hidInputManager.sendMouseMove(dx, dy)
-        }
-    }
-
-    fun mouseClick() = mouseLeftClick()
-
-    fun mouseLeftClick() {
-        if (currentMode in arrayOf(InputMode.MOUSE, InputMode.TOUCHPAD)) {
-            hidInputManager.sendMouseClick(MouseButton.LEFT, true)
-            serviceScope.launch {
-                delay(50)
-                hidInputManager.sendMouseClick(MouseButton.LEFT, false)
+    override fun connect(device: BluetoothDevice): Boolean {
+        return if (isReady()) {
+            Log.d(TAG, "Connecting to device: ${device.address}")
+            // Update input profile based on device profile
+            updateInputProfile()
+            val success = hidDeviceApp.requestConnect(device)
+            if (!success) {
+                HidClient.setConnectionError("Failed to initiate connection to ${device.address}")
             }
+            success
+        } else {
+            Log.w(TAG, "Service not ready for connection. Ready: $isServiceReady, Registered: $isAppRegistered")
+            HidClient.setConnectionError("Service not ready for connection")
+            false
         }
     }
 
-    fun mouseRightClick() {
-        if (currentMode in arrayOf(InputMode.MOUSE, InputMode.TOUCHPAD)) {
-            hidInputManager.sendMouseClick(MouseButton.RIGHT, true)
-            serviceScope.launch {
-                delay(50)
-                hidInputManager.sendMouseClick(MouseButton.RIGHT, false)
+    override fun disconnect(): Boolean {
+        return connectedDevice?.let { device ->
+            Log.d(TAG, "Disconnecting from device: ${device.address}")
+            hidDeviceApp.requestDisconnect(device)
+        } ?: false
+    }
+
+    override fun getConnectedDevice(): BluetoothDevice? = connectedDevice
+
+    override fun getConnectedDevices(): List<BluetoothDevice> =
+        hidDeviceApp.getConnectedDevices()
+
+    /**
+     * Update input profile based on current device profile
+     */
+    private fun updateInputProfile() {
+        inputProfile = when (currentDeviceProfile) {
+            DeviceProfile.InmoAir2 -> InmoAir2InputProfile(hidInputManager)
+            else -> GenericInputProfile(hidInputManager)
+        }
+        Log.d(TAG, "Updated input profile for device type: $currentDeviceProfile")
+    }
+
+    // Input methods - delegate to current input profile with error handling
+    override fun sendKey(keyCode: Int, modifiers: Int): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.sendKey(device, keyCode, modifiers)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error sending key", e)
+                false
             }
-        }
+        } ?: false
     }
 
-    fun mouseDoubleClick() {
-        mouseLeftClick()
-        serviceScope.launch {
-            delay(100)
-            mouseLeftClick()
-        }
+    override fun moveMouse(dx: Int, dy: Int): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.moveMouse(device, dx, dy)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error moving mouse", e)
+                false
+            }
+        } ?: false
     }
 
-    fun mouseDragMove(dx: Int, dy: Int) {
-        if (currentMode in arrayOf(InputMode.MOUSE, InputMode.TOUCHPAD)) {
-            hidInputManager.sendMouseClick(MouseButton.LEFT, true)
-            hidInputManager.sendMouseMove(dx, dy)
-        }
+    override fun mouseScroll(x: Int, y: Int): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.mouseScroll(device, x, y)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error scrolling mouse", e)
+                false
+            }
+        } ?: false
     }
 
-    fun mouseDragEnd() {
-        if (currentMode in arrayOf(InputMode.MOUSE, InputMode.TOUCHPAD)) {
-            hidInputManager.sendMouseClick(MouseButton.LEFT, false)
-        }
+    override fun mouseLeftClick(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.mouseLeftClick(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error left clicking", e)
+                false
+            }
+        } ?: false
     }
 
-    fun mouseScroll(dx: Int, dy: Int) {
-        if (currentMode in arrayOf(InputMode.MOUSE, InputMode.TOUCHPAD)) {
-            hidInputManager.sendMouseScroll(dy)
-        }
+    override fun mouseRightClick(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.mouseRightClick(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error right clicking", e)
+                false
+            }
+        } ?: false
     }
 
-    // Media controls
-    fun playPause() {
-        setInputMode(InputMode.MEDIA)
-        hidInputManager.sendMediaKey(MediaKey.PLAY_PAUSE)
+    override fun mouseDoubleClick(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.mouseDoubleClick(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error double clicking", e)
+                false
+            }
+        } ?: false
     }
 
-    fun setVolume(volume: Int) {
-        setInputMode(InputMode.MEDIA)
-        when (volume) {
-            1 -> hidInputManager.sendMediaKey(MediaKey.VOLUME_UP)
-            -1 -> hidInputManager.sendMediaKey(MediaKey.VOLUME_DOWN)
-        }
+    override fun mouseDragMove(dx: Int, dy: Int): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.mouseDragMove(device, dx, dy)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error drag moving", e)
+                false
+            }
+        } ?: false
     }
 
-    fun nextTrack() {
-        setInputMode(InputMode.MEDIA)
-        hidInputManager.sendMediaKey(MediaKey.NEXT_TRACK)
+    override fun mouseDragEnd(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.mouseDragEnd(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error ending drag", e)
+                false
+            }
+        } ?: false
     }
 
-    fun previousTrack() {
-        setInputMode(InputMode.MEDIA)
-        hidInputManager.sendMediaKey(MediaKey.PREV_TRACK)
+    override fun dpad(direction: Int): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.dpad(device, direction)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error sending dpad", e)
+                false
+            }
+        } ?: false
     }
 
-    // Keyboard methods
-    fun sendKey(keyCode: Int) {
-        setInputMode(InputMode.KEYBOARD)
-        hidInputManager.sendKeyboardKey(keyCode, true)
-        serviceScope.launch {
-            delay(50)
-            hidInputManager.sendKeyboardKey(keyCode, false)
-        }
+    override fun playPause(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.playPause(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error play/pause", e)
+                false
+            }
+        } ?: false
     }
 
-    fun dpad(direction: Int) {
-        setInputMode(InputMode.DPAD)
-        val keyCode = when (direction) {
-            0 -> 0x52    // Up Arrow
-            1 -> 0x51    // Down Arrow
-            2 -> 0x50    // Left Arrow
-            3 -> 0x4F    // Right Arrow
-            8 -> 0x28    // Enter/OK
-            else -> return
-        }
-
-        hidInputManager.sendKeyboardKey(keyCode, true)
-        serviceScope.launch {
-            delay(50)
-            hidInputManager.sendKeyboardKey(keyCode, false)
-        }
+    override fun nextTrack(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.nextTrack(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error next track", e)
+                false
+            }
+        } ?: false
     }
 
-    private fun setInputMode(mode: InputMode) {
-        if (currentMode != mode) {
-            currentMode = mode
-            sendBroadcast(Intent(ACTION_MODE_CHANGED).apply {
-                putExtra(EXTRA_MODE, mode.name)
-            })
-        }
+    override fun previousTrack(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.previousTrack(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error previous track", e)
+                false
+            }
+        } ?: false
     }
 
-    // Legacy compatibility
-    fun sendReport(report: ByteArray) = hidInputManager.sendMouseMove(0, 0)
-
-    fun sendKeyboardReport(report: ByteArray) {
-        if (report.size >= 3) {
-            val keyCode = report[2].toInt() and 0xFF
-            if (keyCode > 0) sendKey(keyCode)
-        }
+    override fun setVolume(volume: Int): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.setVolume(device, volume)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error setting volume", e)
+                false
+            }
+        } ?: false
     }
 
-    fun switchOutput(output: Int) {
-        Log.d("HidService", "switchOutput: $output")
+    override fun volumeUp(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.volumeUp(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error volume up", e)
+                false
+            }
+        } ?: false
+    }
+
+    override fun volumeDown(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.volumeDown(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error volume down", e)
+                false
+            }
+        } ?: false
+    }
+
+    override fun switchOutput(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.switchOutput(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error switching output", e)
+                false
+            }
+        } ?: false
+    }
+
+    override fun resetInputStates(): Boolean {
+        return connectedDevice?.let { device ->
+            try {
+                inputProfile.resetInputs(device)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error resetting inputs", e)
+                false
+            }
+        } ?: false
     }
 }

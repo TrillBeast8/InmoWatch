@@ -1,279 +1,311 @@
 package com.example.inmocontrol_v2.ui.screens
 
-import android.content.Context
-import android.media.session.MediaController
-import android.media.session.MediaSessionManager
-import android.content.res.Configuration
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.Speaker
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.rotary.onRotaryScrollEvent
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.Button as WearButton
+import androidx.compose.ui.unit.sp
+import androidx.wear.compose.material.*
+import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.Text as WearText
-import androidx.wear.compose.material.TimeText
 import com.example.inmocontrol_v2.hid.HidClient
+import com.example.inmocontrol_v2.data.DeviceProfile
 import kotlinx.coroutines.delay
-import kotlin.math.min
 
+/**
+ * Modern Media Control Screen
+ * Improved UI with proper volume controls and device output switching
+ */
 @Composable
-fun MediaScreen(isDeviceConnected: Boolean = false) {
-    val context = LocalContext.current
-    val volume = remember { mutableStateOf(50) }
-    val isPlaying = remember { mutableStateOf(false) }
-    val trackName = remember { mutableStateOf("") }
-    val artistName = remember { mutableStateOf("") }
-    val albumName = remember { mutableStateOf("") }
-    val showVolumeOverlay = remember { mutableStateOf(false) }
-    val outputDevice = remember { mutableStateOf("headphones") } // "headphones", "speaker", "phone"
-    val errorMessage = remember { mutableStateOf("") }
-    val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-    val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
-    val isBluetoothAudioConnected = bluetoothAdapter?.getProfileConnectionState(android.bluetooth.BluetoothProfile.A2DP) == android.bluetooth.BluetoothProfile.STATE_CONNECTED
-    val systemVolume = remember { mutableStateOf(audioManager?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: 5) }
-    val maxSystemVolume = audioManager?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 15
-    val outputIcon = when (outputDevice.value) {
-        "headphones" -> Icons.Filled.Headphones
-        "speaker" -> Icons.Filled.Speaker
-        else -> Icons.Filled.Speaker
+fun MediaScreen(
+    onBack: () -> Unit = {}
+) {
+    LaunchedEffect(Unit) {
+        HidClient.currentDeviceProfile = DeviceProfile.GenericHid
     }
-    val volumeIcon = if (volume.value == 0) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp
 
-    val coroutineScope = rememberCoroutineScope()
-    var lastAction by remember { mutableStateOf("") }
-    var actionFeedbackVisible by remember { mutableStateOf(false) }
+    // State management
+    var isPlaying by remember { mutableStateOf(false) }
+    var currentVolume by remember { mutableStateOf(50) }
+    var pressedButton by remember { mutableStateOf<String?>(null) }
 
-    val configuration = LocalConfiguration.current
-    val minDimension = min(configuration.screenWidthDp, configuration.screenHeightDp)
-    val buttonSize = (minDimension / 4).dp
+    // Use real-time connection state from HidClient
+    val isConnected by HidClient.isConnected.collectAsState()
+    val connectionError by HidClient.connectionError.collectAsState()
 
-    // Auto-hide action feedback after 1 second
-    LaunchedEffect(actionFeedbackVisible) {
-        if (actionFeedbackVisible) {
-            delay(1000)
-            actionFeedbackVisible = false
+    // Auto-clear button feedback after 200ms
+    LaunchedEffect(pressedButton) {
+        if (pressedButton != null) {
+            delay(200)
+            pressedButton = null
         }
     }
 
-    fun performMediaAction(action: String, hidAction: () -> Unit) {
-        try {
-            // First try system media controller
-            val sessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
-            val controllers = sessionManager?.getActiveSessions(null)
+    // Media control functions
+    fun handlePlayPause() {
+        if (isConnected) {
+            pressedButton = "PLAY_PAUSE"
+            isPlaying = !isPlaying
+            HidClient.playPause()
+        }
+    }
 
-            if (controllers != null && controllers.isNotEmpty()) {
-                val controller = controllers[0]
-                // Use system media controller
-                when (action) {
-                    "Play/Pause" -> {
-                        if (controller.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING) {
-                            controller.transportControls.pause()
-                            isPlaying.value = false
-                        } else {
-                            controller.transportControls.play()
-                            isPlaying.value = true
+    fun handlePrevious() {
+        if (isConnected) {
+            pressedButton = "PREVIOUS"
+            HidClient.previousTrack()
+        }
+    }
+
+    fun handleNext() {
+        if (isConnected) {
+            pressedButton = "NEXT"
+            HidClient.nextTrack()
+        }
+    }
+
+    fun handleVolumeUp() {
+        if (isConnected) {
+            pressedButton = "VOLUME_UP"
+            currentVolume = (currentVolume + 5).coerceAtMost(100)
+            HidClient.volumeUp()
+        }
+    }
+
+    fun handleVolumeDown() {
+        if (isConnected) {
+            pressedButton = "VOLUME_DOWN"
+            currentVolume = (currentVolume - 5).coerceAtLeast(0)
+            HidClient.volumeDown()
+        }
+    }
+
+    fun handleOutputSwitch() {
+        if (isConnected) {
+            pressedButton = "OUTPUT_SWITCH"
+            HidClient.switchOutput()
+        }
+    }
+
+    Scaffold(
+        timeText = { TimeText() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Connection status
+                if (!isConnected) {
+                    WearText(
+                        text = connectionError ?: "Not connected",
+                        style = MaterialTheme.typography.caption1,
+                        color = MaterialTheme.colors.error,
+                        textAlign = TextAlign.Center,
+                        fontSize = 10.sp
+                    )
+                }
+
+                // Media info area - more realistic media control display
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    WearText(
+                        text = "Now Playing",
+                        style = MaterialTheme.typography.caption1,
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
+                        fontSize = 10.sp
+                    )
+                    WearText(
+                        text = "Media Player",
+                        style = MaterialTheme.typography.body2,
+                        color = MaterialTheme.colors.onSurface,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    WearText(
+                        text = if (isPlaying) "♪ Playing" else "⏸ Paused",
+                        style = MaterialTheme.typography.caption1,
+                        color = if (isPlaying) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
+                        fontSize = 9.sp
+                    )
+                }
+
+                // Main playback controls
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Previous track
+                    MediaButton(
+                        icon = Icons.Default.SkipPrevious,
+                        onClick = { handlePrevious() },
+                        enabled = isConnected,
+                        isPressed = pressedButton == "PREVIOUS",
+                        size = 40.dp
+                    )
+
+                    // Play/Pause (larger, center)
+                    MediaButton(
+                        icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        onClick = { handlePlayPause() },
+                        enabled = isConnected,
+                        isPressed = pressedButton == "PLAY_PAUSE",
+                        size = 52.dp,
+                        backgroundColor = MaterialTheme.colors.primary
+                    )
+
+                    // Next track
+                    MediaButton(
+                        icon = Icons.Default.SkipNext,
+                        onClick = { handleNext() },
+                        enabled = isConnected,
+                        isPressed = pressedButton == "NEXT",
+                        size = 40.dp
+                    )
+                }
+
+                // Volume controls with single volume control
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 6.dp)
+                ) {
+                    // Volume down
+                    MediaButton(
+                        icon = Icons.AutoMirrored.Filled.VolumeDown,
+                        onClick = { handleVolumeDown() },
+                        enabled = isConnected && currentVolume > 0,
+                        isPressed = pressedButton == "VOLUME_DOWN",
+                        size = 32.dp
+                    )
+
+                    // Volume display
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(50.dp)
+                    ) {
+                        WearText(
+                            text = "$currentVolume%",
+                            style = MaterialTheme.typography.caption1,
+                            color = MaterialTheme.colors.onSurface,
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center
+                        )
+
+                        // Volume bar
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(3.dp)
+                                .background(
+                                    MaterialTheme.colors.surface,
+                                    CircleShape
+                                )
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(currentVolume / 100f)
+                                    .background(
+                                        MaterialTheme.colors.primary,
+                                        CircleShape
+                                    )
+                            )
                         }
                     }
-                    "Previous" -> controller.transportControls.skipToPrevious()
-                    "Next" -> controller.transportControls.skipToNext()
-                }
-            } else {
-                // Fallback to HID if no system media session available
-                hidAction()
-            }
 
-            lastAction = action
-            actionFeedbackVisible = true
-        } catch (e: SecurityException) {
-            // If we don't have permission, fallback to HID
-            try {
-                hidAction()
-                lastAction = action
-                actionFeedbackVisible = true
-            } catch (e2: Exception) {
-                lastAction = "Error"
-                actionFeedbackVisible = true
-            }
-        } catch (e: Exception) {
-            // General error, try HID fallback
-            try {
-                hidAction()
-                lastAction = action
-                actionFeedbackVisible = true
-            } catch (e2: Exception) {
-                lastAction = "Error"
-                actionFeedbackVisible = true
-            }
-        }
-    }
-
-    androidx.wear.compose.material.Scaffold {
-        TimeText()
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (!isDeviceConnected) {
-                Text(text = "No device connected. Please connect a device first.", color = Color.Red, modifier = Modifier.padding(16.dp))
-                // Show system Bluetooth output info
-                val outputText = if (isBluetoothAudioConnected) "Bluetooth headphones connected" else "Speaker/other output"
-                Text(text = "System Output: $outputText", modifier = Modifier.padding(8.dp))
-                // System volume control
-                Text(text = "System Volume", color = Color.White)
-                Slider(
-                    value = systemVolume.value.toFloat(),
-                    onValueChange = {
-                        val newVol = it.toInt().coerceIn(0, maxSystemVolume)
-                        systemVolume.value = newVol
-                        audioManager?.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, newVol, 0)
-                    },
-                    valueRange = 0f..maxSystemVolume.toFloat()
-                )
-                Text(text = "${systemVolume.value}", color = Color.White)
-                Spacer(modifier = Modifier.height(16.dp))
-                androidx.wear.compose.material.Button(onClick = {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
-                    intent.addCategory(android.content.Intent.CATEGORY_APP_MUSIC)
-                    context.startActivity(intent)
-                }) {
-                    WearText("Open System Media Controls")
+                    // Volume up
+                    MediaButton(
+                        icon = Icons.AutoMirrored.Filled.VolumeUp,
+                        onClick = { handleVolumeUp() },
+                        enabled = isConnected && currentVolume < 100,
+                        isPressed = pressedButton == "VOLUME_UP",
+                        size = 32.dp
+                    )
                 }
-            } else {
-                if (errorMessage.value.isNotEmpty()) {
-                    Text(text = errorMessage.value, color = Color.Red, modifier = Modifier.padding(8.dp))
-                }
-                // Show current output device below controls
-                Text(text = "Output: ${outputDevice.value}", modifier = Modifier.padding(8.dp))
 
-                // Media control buttons
+                // Bottom controls row
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 6.dp)
                 ) {
-                    WearButton(onClick = {
-                        performMediaAction("Previous") { HidClient.previousTrack() }
-                    }) {
-                        WearText("⏮")
-                    }
+                    // Device output switch - moved here and made more prominent
+                    MediaButton(
+                        icon = Icons.Default.Bluetooth,
+                        onClick = { handleOutputSwitch() },
+                        enabled = isConnected,
+                        isPressed = pressedButton == "OUTPUT_SWITCH",
+                        size = 36.dp,
+                        backgroundColor = if (pressedButton == "OUTPUT_SWITCH") MaterialTheme.colors.secondary else MaterialTheme.colors.surface
+                    )
 
-                    WearButton(onClick = {
-                        performMediaAction("Play/Pause") { HidClient.playPause() }
-                    }) {
-                        WearText(if (isPlaying.value) "⏸" else "▶")
-                    }
-
-                    WearButton(onClick = {
-                        performMediaAction("Next") { HidClient.nextTrack() }
-                    }) {
-                        WearText("⏭")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Volume controls
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    WearButton(onClick = {
-                        HidClient.setVolume(-1)
-                        lastAction = "Volume Down"
-                        actionFeedbackVisible = true
-                    }) {
-                        WearText("🔉")
-                    }
-
-                    WearButton(onClick = {
-                        HidClient.setVolume(1)
-                        lastAction = "Volume Up"
-                        actionFeedbackVisible = true
-                    }) {
-                        WearText("🔊")
-                    }
-                }
-
-                if (actionFeedbackVisible) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = lastAction, color = Color.Green)
+                    // Back button
+                    MediaButton(
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        onClick = onBack,
+                        enabled = true,
+                        isPressed = pressedButton == "BACK",
+                        size = 36.dp
+                    )
                 }
             }
-        }
-    }
-
-    // MediaSession listener to update metadata
-    LaunchedEffect(Unit) {
-        try {
-            val sessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
-            val controllers = sessionManager?.getActiveSessions(null)
-            if (controllers != null && controllers.isNotEmpty()) {
-                val controller = controllers[0]
-                val metadata = controller.metadata
-                trackName.value = metadata?.getString(android.media.MediaMetadata.METADATA_KEY_TITLE) ?: ""
-                artistName.value = metadata?.getString(android.media.MediaMetadata.METADATA_KEY_ARTIST) ?: ""
-                albumName.value = metadata?.getString(android.media.MediaMetadata.METADATA_KEY_ALBUM) ?: ""
-                controller.registerCallback(object : MediaController.Callback() {
-                    override fun onMetadataChanged(metadata: android.media.MediaMetadata?) {
-                        trackName.value = metadata?.getString(android.media.MediaMetadata.METADATA_KEY_TITLE) ?: ""
-                        artistName.value = metadata?.getString(android.media.MediaMetadata.METADATA_KEY_ARTIST) ?: ""
-                        albumName.value = metadata?.getString(android.media.MediaMetadata.METADATA_KEY_ALBUM) ?: ""
-                    }
-                })
-            } else {
-                trackName.value = "No media info available"
-                artistName.value = ""
-                albumName.value = ""
-            }
-        } catch (_: SecurityException) {
-            trackName.value = "Permission required"
-            artistName.value = ""
-            albumName.value = ""
-        } catch (_: Exception) {
-            trackName.value = "Media error"
-            artistName.value = ""
-            albumName.value = ""
         }
     }
 }
 
-// Helper function for output device int
-fun outputDeviceToInt(device: String): Int = when (device) {
-    "headphones" -> 0
-    "speaker" -> 1
-    "phone" -> 2
-    else -> 0
-}
-
-// Preview for small Wear OS circular screen
-@Preview(device = "id:wearos_small_round", showSystemUi = true)
 @Composable
-fun MediaScreenPreview() {
-    MediaScreen(isDeviceConnected = true)
+private fun MediaButton(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    isPressed: Boolean,
+    size: Dp,
+    backgroundColor: Color = MaterialTheme.colors.surface
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(
+                if (isPressed) MaterialTheme.colors.secondary
+                else if (enabled) backgroundColor
+                else backgroundColor.copy(alpha = 0.3f)
+            )
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (enabled) {
+                if (backgroundColor == MaterialTheme.colors.primary) Color.White
+                else MaterialTheme.colors.onSurface
+            } else {
+                MaterialTheme.colors.onSurface.copy(alpha = 0.3f)
+            },
+            modifier = Modifier.size(size * 0.6f)
+        )
+    }
 }

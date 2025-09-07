@@ -9,4 +9,5 @@ object Routes {
     const val Settings = "settings"
     const val MouseCalibration = "mouse_calibration"
     const val ConnectDevice = "connect_device" // Added device connection route
+    const val ModeSelect = "mode_select" // Added mode selection route
 }

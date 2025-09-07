@@ -1,26 +1,12 @@
 package com.example.inmocontrol_v2.ui.screens
 
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,26 +20,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.TimeText
-import androidx.wear.compose.material.Text as WearText
-import com.example.inmocontrol_v2.data.SettingsStore
+import androidx.wear.compose.material.*
 import com.example.inmocontrol_v2.hid.HidClient
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
+import com.example.inmocontrol_v2.data.DeviceProfile
+import com.example.inmocontrol_v2.sensors.WearMouseSensorFusion
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.min
 
 @Composable
-fun MouseScreen() {
-    val coroutineScope = rememberCoroutineScope()
-    val lastAction = remember { mutableStateOf("Tilt to move") }
-    val isMoving = remember { mutableStateOf(false) }
-    val actionFeedbackVisible = remember { mutableStateOf(false) }
+fun MouseScreen(
+    onOpenScrollPopup: () -> Unit = {}
+) {
     val context = LocalContext.current
+
+    var lastAction by remember { mutableStateOf("Ready") }
+    var actionFeedbackVisible by remember { mutableStateOf(false) }
+    var showScrollPopup by remember { mutableStateOf(false) }
 
     val configuration = LocalConfiguration.current
 
@@ -63,109 +45,69 @@ fun MouseScreen() {
     val minDimension = min(screenWidthDp.value, screenHeightDp.value)
 
     // Mouse area takes most of the screen
-    val mouseAreaSize = (minDimension * 0.9f).dp
-    // Center indicator is smaller
-    val indicatorSize = (minDimension * 0.3f).dp
+    val mouseAreaSize = (minDimension * 0.85f).dp
 
-    // Sensor and settings state
-    val settingsStore = remember { SettingsStore.get(context) }
-    val baselineGyro = remember { mutableStateOf(floatArrayOf(0f, 0f, 0f)) }
-    val baselineAccel = remember { mutableStateOf(floatArrayOf(0f, 0f, 0f)) }
-    val sensitivity = settingsStore.sensitivity.collectAsState(initial = 10f).value
+    // WearMouse sensor fusion instance
+    val sensorFusion = remember { WearMouseSensorFusion(context) }
 
-    // Sensor values
-    val accelValues = remember { mutableStateOf(floatArrayOf(0f, 0f, 0f)) }
-    val gyroValues = remember { mutableStateOf(floatArrayOf(0f, 0f, 0f)) }
+    // Use real-time connection state from HidClient
+    val isConnected by HidClient.isConnected.collectAsState()
+    val connectionError by HidClient.connectionError.collectAsState()
 
-    // Sensor event processing
-    val sensorEventChannel = remember { Channel<Pair<Float, Float>>(capacity = Channel.UNLIMITED) }
-    val job = remember { Job() }
-
-    // Load calibration baselines
-    LaunchedEffect(Unit) {
-        settingsStore.baselineGyro.collectLatest { baselineGyro.value = it }
-    }
-    LaunchedEffect(Unit) {
-        settingsStore.baselineAccel.collectLatest { baselineAccel.value = it }
-    }
-
-    // Auto-hide action feedback after 2 seconds
-    LaunchedEffect(actionFeedbackVisible.value) {
-        if (actionFeedbackVisible.value) {
-            delay(2000)
-            actionFeedbackVisible.value = false
+    // Auto-hide action feedback after 1.5 seconds
+    LaunchedEffect(actionFeedbackVisible) {
+        if (actionFeedbackVisible) {
+            delay(1500)
+            actionFeedbackVisible = false
         }
     }
 
-    // Sensor-based mouse movement (fusion)
-    DisposableEffect(Unit) {
-        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        val accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-
-        val listener = object : SensorEventListener {
-            override fun onSensorChanged(event: SensorEvent) {
-                when (event.sensor.type) {
-                    Sensor.TYPE_ACCELEROMETER -> {
-                        accelValues.value = event.values.clone()
-                    }
-                    Sensor.TYPE_GYROSCOPE -> {
-                        gyroValues.value = event.values.clone()
-                        // Use persistent calibration baselines
-                        val adjGyro = floatArrayOf(
-                            event.values[0] - baselineGyro.value[0],
-                            event.values[1] - baselineGyro.value[1],
-                            event.values[2] - baselineGyro.value[2]
-                        )
-                        val adjAccel = floatArrayOf(
-                            accelValues.value[0] - baselineAccel.value[0],
-                            accelValues.value[1] - baselineAccel.value[1],
-                            accelValues.value[2] - baselineAccel.value[2]
-                        )
-                        // Sensor fusion: 98% gyro, 2% accel for stability
-                        val fusedX = 0.98f * adjGyro[0] + 0.02f * adjAccel[0]
-                        val fusedY = 0.98f * adjGyro[1] + 0.02f * adjAccel[1]
-                        sensorEventChannel.trySend(Pair(fusedX, fusedY))
-                    }
-                }
-            }
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-        }
-
-        sensorManager.registerListener(listener, accelSensor, SensorManager.SENSOR_DELAY_GAME)
-        sensorManager.registerListener(listener, gyroSensor, SensorManager.SENSOR_DELAY_GAME)
-
-        onDispose {
-            sensorManager.unregisterListener(listener)
-            job.cancel()
-        }
-    }
-
-    // Batch and process mouse movement - FIXED: Remove infinite loop
+    // PURE WearMouse sensor fusion - NO touch movement detection
     LaunchedEffect(Unit) {
-        val movementThreshold = 0.05f
-        for (event in sensorEventChannel) {
-            val deltaX = event.first
-            val deltaY = event.second
+        // Set device profile to Mouse for proper HID behavior
+        HidClient.currentDeviceProfile = DeviceProfile.Mouse
 
-            if (abs(deltaX) > movementThreshold || abs(deltaY) > movementThreshold) {
-                isMoving.value = true
-                lastAction.value = "Moving..."
-                actionFeedbackVisible.value = true
+        // Configure sensor fusion exactly like original WearMouse
+        sensorFusion.setHandMode(WearMouseSensorFusion.HandMode.CENTER)
+        sensorFusion.setStabilize(true)
+        sensorFusion.setLefty(false)
+        sensorFusion.reset() // Start fresh
 
+        // Start sensor fusion with callback - ONLY source of mouse movement
+        try {
+            sensorFusion.start { movement ->
                 try {
-                    HidClient.moveMouse((deltaX * sensitivity).toInt(), (deltaY * sensitivity).toInt())
-                } catch (e: Exception) {
-                    Log.e("MouseScreen", "Error sending mouse movement: ${e.message}")
-                }
+                    // Send pure gyro-based mouse movement - no touch involved
+                    if (movement.deltaX != 0f || movement.deltaY != 0f) {
+                        HidClient.moveMouse(movement.deltaX.toInt(), movement.deltaY.toInt())
+                    }
 
-                // Stop showing movement after a brief delay
-                coroutineScope.launch {
-                    delay(200)
-                    isMoving.value = false
+                    // Handle wheel scrolling if any
+                    if (movement.deltaWheel != 0f) {
+                        HidClient.mouseScroll(0, movement.deltaWheel.toInt())
+                    }
+                } catch (e: Exception) {
+                    Log.e("MouseScreen", "Error sending gyro movement: ${e.message}")
                 }
             }
+            Log.d("MouseScreen", "WearMouse sensor fusion started successfully")
+        } catch (e: Exception) {
+            Log.e("MouseScreen", "Error starting sensor fusion: ${e.message}")
         }
+    }
+
+    // Cleanup sensor fusion
+    DisposableEffect(Unit) {
+        onDispose { sensorFusion.stop() }
+    }
+
+    // Show scroll popup overlay when requested
+    if (showScrollPopup) {
+        ScrollPopupScreen(
+            parentScreen = "mouse",
+            onBack = { showScrollPopup = false }
+        )
+        return
     }
 
     Scaffold {
@@ -173,122 +115,195 @@ fun MouseScreen() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Main mouse area - circular region for interactions
+            // Title with long-press to open scroll popup
             Box(
                 modifier = Modifier
-                    .size(mouseAreaSize)
-                    .clip(CircleShape)
-                    .background(Color.DarkGray.copy(alpha = 0.3f))
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
                     .pointerInput(Unit) {
                         detectTapGestures(
-                            onTap = {
-                                coroutineScope.launch {
-                                    lastAction.value = "Left Click"
-                                    actionFeedbackVisible.value = true
-                                    try {
-                                        HidClient.mouseLeftClick()
-                                    } catch (e: Exception) {}
-                                }
-                            },
                             onLongPress = {
-                                coroutineScope.launch {
-                                    lastAction.value = "Right Click"
-                                    actionFeedbackVisible.value = true
-                                    try {
-                                        HidClient.mouseRightClick()
-                                    } catch (e: Exception) {}
-                                }
-                            },
-                            onDoubleTap = {
-                                coroutineScope.launch {
-                                    lastAction.value = "Double Click"
-                                    actionFeedbackVisible.value = true
-                                    try {
-                                        HidClient.mouseDoubleClick()
-                                    } catch (e: Exception) {}
-                                }
+                                showScrollPopup = true
                             }
                         )
                     }
             ) {
-                // Visual feedback ring around the mouse area
+                Text(
+                    text = "WearMouse • Point to move • Tap to click",
+                    fontSize = 11.sp,
+                    color = Color(0xFFCCCCCC),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            // Error feedback
+            if (connectionError != null) {
+                Text(
+                    text = "Connection Error: $connectionError",
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 32.dp)
+                )
+            }
+
+            // Main click area - ONLY FOR CLICKS, NOT MOVEMENT
+            Box(
+                modifier = Modifier
+                    .size(mouseAreaSize)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {
+                                if (isConnected) {
+                                    lastAction = "Left Click"
+                                    actionFeedbackVisible = true
+                                    try {
+                                        HidClient.mouseLeftClick()
+                                    } catch (e: Exception) {
+                                        Log.e("MouseScreen", "Left click error: ${e.message}")
+                                    }
+                                }
+                            },
+                            onLongPress = {
+                                if (isConnected) {
+                                    lastAction = "Right Click"
+                                    actionFeedbackVisible = true
+                                    try {
+                                        HidClient.mouseRightClick()
+                                    } catch (e: Exception) {
+                                        Log.e("MouseScreen", "Right click error: ${e.message}")
+                                    }
+                                }
+                            },
+                            onDoubleTap = {
+                                if (isConnected) {
+                                    lastAction = "Double Click"
+                                    actionFeedbackVisible = true
+                                    try {
+                                        HidClient.mouseDoubleClick()
+                                    } catch (e: Exception) {
+                                        Log.e("MouseScreen", "Double click error: ${e.message}")
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    .background(
+                        color = if (isConnected) Color(0xFF404040) else Color(0xFF202020),
+                        shape = CircleShape
+                    )
+            ) {
+                // Visual indicators
                 Canvas(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val radius = size.minDimension / 2f
 
-                    // Outer ring - mouse area boundary
+                    // Outer circle
                     drawCircle(
-                        color = if (isMoving.value) Color.Cyan.copy(alpha = 0.8f) else Color.Gray.copy(alpha = 0.4f),
-                        radius = radius - 4.dp.toPx(),
+                        color = Color(0xFF404040),
+                        radius = radius - 2.dp.toPx(),
                         center = center,
-                        style = Stroke(width = 3.dp.toPx())
+                        style = Stroke(width = 2.dp.toPx())
                     )
 
-                    // Inner crosshairs for reference
+                    // Crosshairs
+                    val crosshairColor = if (isConnected) Color(0xFF666666) else Color(0xFF333333)
+                    val crosshairLength = 15.dp.toPx()
+
                     drawLine(
-                        color = Color.Gray.copy(alpha = 0.3f),
-                        start = Offset(center.x - 20.dp.toPx(), center.y),
-                        end = Offset(center.x + 20.dp.toPx(), center.y),
+                        color = crosshairColor,
+                        start = Offset(center.x - crosshairLength, center.y),
+                        end = Offset(center.x + crosshairLength, center.y),
                         strokeWidth = 1.dp.toPx()
                     )
+
                     drawLine(
-                        color = Color.Gray.copy(alpha = 0.3f),
-                        start = Offset(center.x, center.y - 20.dp.toPx()),
-                        end = Offset(center.x, center.y + 20.dp.toPx()),
+                        color = crosshairColor,
+                        start = Offset(center.x, center.y - crosshairLength),
+                        end = Offset(center.x, center.y + crosshairLength),
                         strokeWidth = 1.dp.toPx()
+                    )
+
+                    // Center dot
+                    drawCircle(
+                        color = if (isConnected) Color(0xFF2196F3) else Color(0xFF666666),
+                        radius = 3.dp.toPx(),
+                        center = center
                     )
                 }
             }
 
-            // Center indicator circle showing sensor status and actions
-            Box(
-                modifier = Modifier
-                    .size(indicatorSize)
-                    .clip(CircleShape)
-                    .background(
-                        when {
-                            isMoving.value -> Color.Cyan.copy(alpha = 0.8f)
-                            actionFeedbackVisible.value -> Color.Green.copy(alpha = 0.8f)
-                            else -> Color.Blue.copy(alpha = 0.6f)
-                        }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                WearText(
-                    text = lastAction.value,
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center,
-                    color = Color.White,
-                    modifier = Modifier.padding(6.dp),
-                    maxLines = 2
-                )
+            // Action feedback overlay
+            if (actionFeedbackVisible) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF2A2A2A)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = lastAction,
+                        fontSize = 12.sp,
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
-            // Instruction text at the top
-            WearText(
-                text = "Motion Mouse",
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 16.dp),
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = 0.8f)
-            )
+            // Connection status indicator
+            if (!isConnected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(mouseAreaSize)
+                        .clip(CircleShape)
+                        .background(Color(0x80000000)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "⚠",
+                            fontSize = 24.sp,
+                            color = Color(0xFFFF9800)
+                        )
+                        Text(
+                            text = "Not Connected",
+                            fontSize = 12.sp,
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            }
 
-            // Sensitivity indicator at bottom
-            WearText(
-                text = "Sensitivity: ${sensitivity.toInt()}",
+            // Instructions at bottom
+            Text(
+                text = "Point to move • Tap to click • Long press for right click",
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 16.dp),
-                fontSize = 10.sp,
-                color = Color.White.copy(alpha = 0.6f)
+                fontSize = 8.sp,
+                color = Color(0xFF888888),
+                textAlign = TextAlign.Center
             )
         }
+    }
+
+    LaunchedEffect(Unit) {
+        HidClient.currentDeviceProfile = DeviceProfile.Mouse
     }
 }
 

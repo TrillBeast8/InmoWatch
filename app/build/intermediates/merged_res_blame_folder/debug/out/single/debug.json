@@ -1,10 +1,14 @@
 [
     {
-        "merged": "com.example.inmocontrol_v2.app-merged_res-62:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.example.inmocontrol_v2.app-main-64:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "com.example.inmocontrol_v2.app-merged_res-60:/xml_network_security_config.xml.flat",
+        "source": "com.example.inmocontrol_v2.app-main-62:/xml/network_security_config.xml"
     },
     {
-        "merged": "com.example.inmocontrol_v2.app-merged_res-62:/xml_backup_rules.xml.flat",
-        "source": "com.example.inmocontrol_v2.app-main-64:/xml/backup_rules.xml"
+        "merged": "com.example.inmocontrol_v2.app-merged_res-60:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.example.inmocontrol_v2.app-main-62:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.example.inmocontrol_v2.app-merged_res-60:/xml_backup_rules.xml.flat",
+        "source": "com.example.inmocontrol_v2.app-main-62:/xml/backup_rules.xml"
     }
 ]

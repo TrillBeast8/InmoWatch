@@ -5,3 +5,4 @@ color white
 mipmap ic_launcher
 string app_name
 xml backup_rules
+xml network_security_config

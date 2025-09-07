@@ -29,6 +29,7 @@ class SettingsStore private constructor(private val context: Context) {
         private val LAST_CONNECTED_DEVICE_NAME = stringPreferencesKey("last_connected_device_name")
         private val LAST_CONNECTED_DEVICE_ADDRESS = stringPreferencesKey("last_connected_device_address")
         private val AUTO_RECONNECT_ENABLED = booleanPreferencesKey("auto_reconnect_enabled")
+        private val MOUSE_CALIBRATION_COMPLETE = booleanPreferencesKey("mouse_calibration_complete")
 
         @Volatile
         private var INSTANCE: SettingsStore? = null
@@ -60,6 +61,7 @@ class SettingsStore private constructor(private val context: Context) {
     val lastConnectedDeviceName: Flow<String?> = context.settingsDataStore.data.map { it[LAST_CONNECTED_DEVICE_NAME] }
     val lastConnectedDeviceAddress: Flow<String?> = context.settingsDataStore.data.map { it[LAST_CONNECTED_DEVICE_ADDRESS] }
     val autoReconnectEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[AUTO_RECONNECT_ENABLED] ?: true }
+    val mouseCalibrationComplete: Flow<Boolean> = context.settingsDataStore.data.map { it[MOUSE_CALIBRATION_COMPLETE] ?: false }
 
     suspend fun setSensitivity(value: Float) {
         context.settingsDataStore.edit { it[SENSITIVITY] = value }
@@ -119,5 +121,9 @@ class SettingsStore private constructor(private val context: Context) {
 
     suspend fun setAutoReconnectEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { it[AUTO_RECONNECT_ENABLED] = enabled }
+    }
+
+    suspend fun saveMouseCalibrationComplete(isComplete: Boolean) {
+        context.settingsDataStore.edit { it[MOUSE_CALIBRATION_COMPLETE] = isComplete }
     }
 }

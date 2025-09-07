@@ -13,10 +13,19 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        // Optimize for performance and size
+        vectorDrawables.useSupportLibrary = true
+        resourceConfigurations += listOf("en")
     }
 
     buildFeatures {
         compose = true
+        buildConfig = false  // Disable BuildConfig generation to reduce APK size
+        aidl = false
+        renderScript = false
+        resValues = false
+        shaders = false
     }
 
     composeOptions {
@@ -24,73 +33,107 @@ android {
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isDebuggable = true
+        }
+
         release {
             isMinifyEnabled = true
+            isShrinkResources = true  // Remove unused resources
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
+            // Additional optimizations
+            ndk {
+                debugSymbolLevel = "NONE"
+            }
         }
     }
 
-
+    // Optimize compilation
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = false  // Disable if not needed
     }
 
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs += listOf(
+            "-opt-in=kotlin.RequiresOptIn",
+            "-Xjvm-default=all"
+        )
+    }
+
+    // Optimize packaging
+    packagingOptions {
+        resources {
+            excludes += setOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "/META-INF/DEPENDENCIES",
+                "/META-INF/LICENSE",
+                "/META-INF/LICENSE.txt",
+                "/META-INF/license.txt",
+                "/META-INF/NOTICE",
+                "/META-INF/NOTICE.txt",
+                "/META-INF/notice.txt",
+                "/META-INF/ASL2.0",
+                "/META-INF/*.kotlin_module",
+                "DebugProbesKt.bin"
+            )
+        }
     }
 }
-
 
 dependencies {
     // INMO AR SDK
     implementation("com.inmo:inmo_arsdk:0.0.1")
 
-    // AndroidX Core dependencies
+    // Core dependencies - optimized versions
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
-    implementation("androidx.activity:activity-ktx:1.7.2")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation("androidx.emoji2:emoji2:1.3.0")
-    implementation("androidx.annotation:annotation-experimental:1.3.1")
-    implementation("androidx.core:core-viewtree:1.0.0")
-    implementation("androidx.profileinstaller:profileinstaller:1.3.1")
+    implementation("androidx.activity:activity-compose:1.8.2")  // Combined activity support
 
-    // Compose BOM for version alignment
-    implementation(platform("androidx.compose:compose-bom:2023.10.01"))
+    // Compose BOM for version alignment - optimized
+    implementation(platform("androidx.compose:compose-bom:2024.02.00"))  // Latest stable
     implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material:material")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.compose.foundation:foundation")
+
+    // Material Design - add Material3 for compatibility
+    implementation("androidx.compose.material:material")  // For Wear OS
+    implementation("androidx.compose.material3:material3") // For Material3 components
+
+    // Icons - add extended icons for missing icons
     implementation("androidx.compose.material:material-icons-core")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-extended") // Needed for Bluetooth icons
+
+    // Debug tools - only in debug builds
     debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-tooling-preview")
 
-    // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.7.5")
+    // Navigation - lightweight
+    implementation("androidx.navigation:navigation-compose:2.7.6")
 
-    // DataStore for preferences
+    // DataStore - keep for settings
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+    // Coroutines - essential
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // Wear Compose dependencies
+    // Wear Compose - optimized selection
     implementation("androidx.wear.compose:compose-foundation:1.2.1")
     implementation("androidx.wear.compose:compose-material:1.2.1")
     implementation("androidx.wear.compose:compose-navigation:1.2.1")
-    implementation("androidx.wear.compose:compose-ui-tooling:1.2.1")
+    debugImplementation("androidx.wear.compose:compose-ui-tooling:1.2.1")
 
-    // Wear OS Tile dependencies
+    // Wear OS Tiles - add missing concurrent futures
     implementation("androidx.wear.tiles:tiles:1.1.0")
     implementation("androidx.wear.tiles:tiles-material:1.1.0")
     implementation("androidx.wear.protolayout:protolayout:1.1.0")
-    implementation("androidx.wear.protolayout:protolayout-expression:1.1.0")
-    implementation("androidx.concurrent:concurrent-futures:1.1.0")
-    implementation("com.google.guava:guava:31.1-android")
+    implementation("androidx.concurrent:concurrent-futures:1.1.0") // Needed for CallbackToFutureAdapter
 
-    // Lifecycle and ViewModel for Compose
+    // Lifecycle for Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 }

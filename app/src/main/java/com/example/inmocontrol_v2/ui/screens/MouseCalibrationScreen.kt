@@ -1,180 +1,278 @@
 package com.example.inmocontrol_v2.ui.screens
 
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
+import android.util.Log
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.Scaffold
+import androidx.wear.compose.material.TimeText
+import androidx.wear.compose.material.Text as WearText
 import com.example.inmocontrol_v2.data.SettingsStore
+import com.example.inmocontrol_v2.sensors.WearMouseSensorFusion
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.min
 
 data class CalibrationState(
-    var minX: Float = 0f,
-    var minY: Float = 0f,
-    var maxX: Float = 1f,
-    var maxY: Float = 1f,
-    var centerX: Float = 0.5f,
-    var centerY: Float = 0.5f,
-    var sensitivity: Float = 1.0f
+    var isCalibrating: Boolean = false,
+    var calibrationProgress: Int = 0,
+    var maxProgress: Int = 100,
+    var message: String = "Hold watch in neutral position",
+    var isComplete: Boolean = false
 )
 
 @Composable
-fun MouseCalibrationScreen(onNavigate: (String) -> Unit = {}) {
+fun MouseCalibrationScreen(
+    onBack: () -> Unit = {}
+) {
     val context = LocalContext.current
     val settingsStore = remember { SettingsStore.get(context) }
     val scope = rememberCoroutineScope()
-    var step by remember { mutableStateOf(0) }
-    var feedbackMessage by remember { mutableStateOf("") }
     val calibrationState = remember { mutableStateOf(CalibrationState()) }
 
-    val sensorManager = remember { context.getSystemService(android.content.Context.SENSOR_SERVICE) as SensorManager }
-    val accelValues = remember { mutableStateOf(floatArrayOf(0f, 0f, 0f)) }
-    val gyroValues = remember { mutableStateOf(floatArrayOf(0f, 0f, 0f)) }
-    DisposableEffect(Unit) {
-        val accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-        val listener = object : SensorEventListener {
-            override fun onSensorChanged(event: SensorEvent) {
-                when (event.sensor.type) {
-                    Sensor.TYPE_ACCELEROMETER -> accelValues.value = event.values.clone()
-                    Sensor.TYPE_GYROSCOPE -> gyroValues.value = event.values.clone()
-                }
-            }
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp.dp
+    val screenHeightDp = configuration.screenHeightDp.dp
+    val minDimension = min(screenWidthDp.value, screenHeightDp.value)
+    val calibrationAreaSize = (minDimension * 0.7f).dp
+
+    // WearMouse sensor fusion for calibration
+    val sensorFusion = remember { WearMouseSensorFusion(context) }
+
+    // Auto-return to main screen after completion
+    LaunchedEffect(calibrationState.value.isComplete) {
+        if (calibrationState.value.isComplete) {
+            delay(2000)
+            onBack()
         }
-        sensorManager.registerListener(listener, accelSensor, SensorManager.SENSOR_DELAY_UI)
-        sensorManager.registerListener(listener, gyroSensor, SensorManager.SENSOR_DELAY_UI)
-        onDispose { sensorManager.unregisterListener(listener) }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("Mouse Calibration", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(16.dp))
-            when (step) {
-                0 -> {
-                    Text("Step 1: Move mouse to TOP-LEFT and press Confirm")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = {
-                        calibrationState.value.minX = 0f
-                        calibrationState.value.minY = 0f
-                        step++
-                    }) { Text("Confirm Top-Left") }
-                }
-                1 -> {
-                    Text("Step 2: Move mouse to BOTTOM-RIGHT and press Confirm")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = {
-                        calibrationState.value.maxX = 1f
-                        calibrationState.value.maxY = 1f
-                        step++
-                    }) { Text("Confirm Bottom-Right") }
-                }
-                2 -> {
-                    Text("Step 3: Move mouse to CENTER and press Confirm")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = {
-                        calibrationState.value.centerX = 0.5f
-                        calibrationState.value.centerY = 0.5f
-                        step++
-                    }) { Text("Confirm Center") }
-                }
-                3 -> {
-                    Text("Step 4: Adjust mouse sensitivity")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Slider(
-                        value = calibrationState.value.sensitivity,
-                        onValueChange = { calibrationState.value.sensitivity = it },
-                        valueRange = 0.1f..3.0f,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Text("Sensitivity: ${String.format("%.2f", calibrationState.value.sensitivity)}")
-                    Spacer(modifier = Modifier.height(16.dp))
+    // Calibration process
+    fun startCalibration() {
+        scope.launch {
+            calibrationState.value = calibrationState.value.copy(
+                isCalibrating = true,
+                calibrationProgress = 0,
+                message = "Hold watch steady in neutral position"
+            )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = {
-                            scope.launch {
-                                // Save calibration and baselines
-                                settingsStore.saveCalibration(
-                                    calibrationState.value.minX,
-                                    calibrationState.value.minY,
-                                    calibrationState.value.maxX,
-                                    calibrationState.value.maxY,
-                                    calibrationState.value.centerX,
-                                    calibrationState.value.centerY,
-                                    calibrationState.value.sensitivity
-                                )
-                                // Save current sensor readings as baselines
-                                settingsStore.setBaselineGyro(gyroValues.value)
-                                settingsStore.setBaselineAccel(accelValues.value)
-                                feedbackMessage = "Calibration saved!"
+            try {
+                // Configure sensor fusion for calibration
+                sensorFusion.setHandMode(WearMouseSensorFusion.HandMode.CENTER)
+                sensorFusion.setStabilize(true)
+                sensorFusion.setLefty(false)
+
+                // Collect baseline data for 3 seconds
+                var sampleCount = 0
+                val maxSamples = 100 // About 3 seconds at normal rate
+
+                // Start sensor fusion with callback
+                sensorFusion.start { movement ->
+                    if (calibrationState.value.isCalibrating) {
+                        sampleCount++
+                        val progress = (sampleCount * 100) / maxSamples
+
+                        calibrationState.value = calibrationState.value.copy(
+                            calibrationProgress = progress,
+                            message = when {
+                                progress < 30 -> "Collecting baseline data..."
+                                progress < 60 -> "Keep holding steady..."
+                                progress < 90 -> "Almost done..."
+                                else -> "Finalizing calibration..."
                             }
-                        }) {
-                            Text("Save")
-                        }
+                        )
 
-                        Button(onClick = {
-                            onNavigate("settings")
-                        }) {
-                            Text("Back")
+                        if (sampleCount >= maxSamples) {
+                            // Save calibration baseline
+                            scope.launch {
+                                settingsStore.saveMouseCalibrationComplete(true)
+                            }
+
+                            calibrationState.value = calibrationState.value.copy(
+                                isCalibrating = false,
+                                calibrationProgress = 100,
+                                message = "Calibration Complete!",
+                                isComplete = true
+                            )
+
+                            sensorFusion.stop()
                         }
                     }
                 }
-                else -> {
-                    Text("Calibration Complete!")
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { onNavigate("settings") }) {
-                        Text("Back to Settings")
+
+                // Wait for calibration to complete or timeout after 10 seconds
+                var timeoutCount = 0
+                while (calibrationState.value.isCalibrating && timeoutCount < 100) {
+                    delay(100)
+                    timeoutCount++
+                }
+
+                if (timeoutCount >= 100) {
+                    // Timeout
+                    calibrationState.value = calibrationState.value.copy(
+                        isCalibrating = false,
+                        message = "Calibration timeout. Try again.",
+                        isComplete = false
+                    )
+                    sensorFusion.stop()
+                }
+
+            } catch (e: Exception) {
+                Log.e("MouseCalibration", "Calibration failed: ${e.message}")
+                calibrationState.value = calibrationState.value.copy(
+                    isCalibrating = false,
+                    message = "Calibration failed. Try again.",
+                    isComplete = false
+                )
+                sensorFusion.stop()
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            sensorFusion.stop()
+        }
+    }
+
+    Scaffold {
+        TimeText()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Title
+                WearText(
+                    text = "WearMouse Calibration",
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    fontSize = 14.sp,
+                    color = Color(0xFFCCCCCC),
+                    textAlign = TextAlign.Center
+                )
+
+                // Calibration area with progress indicator
+                Box(
+                    modifier = Modifier
+                        .size(calibrationAreaSize)
+                        .clip(CircleShape)
+                        .background(Color(0xFF1A1A1A)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        val radius = size.minDimension / 2f
+
+                        // Background circle
+                        drawCircle(
+                            color = Color(0xFF404040),
+                            radius = radius - 4.dp.toPx(),
+                            center = center,
+                            style = Stroke(width = 3.dp.toPx())
+                        )
+
+                        // Progress arc
+                        if (calibrationState.value.calibrationProgress > 0) {
+                            val sweepAngle = (calibrationState.value.calibrationProgress / 100f) * 360f
+                            drawArc(
+                                color = if (calibrationState.value.isComplete) Color(0xFF4CAF50) else Color(0xFF2196F3),
+                                startAngle = -90f,
+                                sweepAngle = sweepAngle,
+                                useCenter = false,
+                                topLeft = Offset(4.dp.toPx(), 4.dp.toPx()),
+                                size = androidx.compose.ui.geometry.Size(
+                                    size.width - 8.dp.toPx(),
+                                    size.height - 8.dp.toPx()
+                                ),
+                                style = Stroke(width = 6.dp.toPx())
+                            )
+                        }
+
+                        // Center indicator
+                        drawCircle(
+                            color = if (calibrationState.value.isCalibrating) Color(0xFF2196F3) else Color(0xFF666666),
+                            radius = 8.dp.toPx(),
+                            center = center
+                        )
+                    }
+
+                    // Progress percentage
+                    if (calibrationState.value.calibrationProgress > 0) {
+                        WearText(
+                            text = "${calibrationState.value.calibrationProgress}%",
+                            fontSize = 16.sp,
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
-            }
 
-            if (feedbackMessage.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(feedbackMessage, color = MaterialTheme.colorScheme.primary)
-                LaunchedEffect(feedbackMessage) {
-                    kotlinx.coroutines.delay(2000)
-                    feedbackMessage = ""
+
+                // Status message
+                WearText(
+                    text = calibrationState.value.message,
+                    fontSize = 12.sp,
+                    color = Color(0xFFCCCCCC),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Control buttons
+                if (!calibrationState.value.isCalibrating && !calibrationState.value.isComplete) {
+                    Button(
+                        onClick = { startCalibration() },
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        WearText("Start Calibration", fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = onBack,
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        WearText("Back", fontSize = 12.sp)
+                    }
                 }
-            }
 
-            // Show current sensor values for debugging
-            if (step < 4) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "Gyro: ${String.format("%.2f, %.2f, %.2f",
-                        gyroValues.value[0], gyroValues.value[1], gyroValues.value[2])}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    "Accel: ${String.format("%.2f, %.2f, %.2f",
-                        accelValues.value[0], accelValues.value[1], accelValues.value[2])}",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                if (calibrationState.value.isComplete) {
+                    WearText(
+                        text = "Returning to main screen...",
+                        fontSize = 10.sp,
+                        color = Color(0xFF888888),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
 }
 
-@Preview(
-    name = "Wear OS Round Preview",
-    device = "id:wearos_small_round",
-    showBackground = true
-)
+@Preview(device = "id:wearos_small_round", showSystemUi = true)
 @Composable
 fun MouseCalibrationScreenPreview() {
     MouseCalibrationScreen()

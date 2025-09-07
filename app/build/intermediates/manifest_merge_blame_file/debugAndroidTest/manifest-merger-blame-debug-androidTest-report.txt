@@ -3,32 +3,32 @@
 3    package="com.example.inmocontrol_v2.test" >
 4
 5    <uses-sdk
-5-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:5:5-74
+5-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:5:5-74
 6        android:minSdkVersion="28"
-6-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:5:15-41
+6-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:5:15-41
 7        android:targetSdkVersion="34" />
-7-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:5:42-71
+7-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:5:42-71
 8
 9    <instrumentation
-9-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:11:5-15:76
+9-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:11:5-15:76
 10        android:name="android.test.InstrumentationTestRunner"
-10-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:11:22-75
+10-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:11:22-75
 11        android:functionalTest="false"
-11-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:14:22-52
+11-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:14:22-52
 12        android:handleProfiling="false"
-12-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:13:22-53
+12-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:13:22-53
 13        android:label="Tests for com.example.inmocontrol_v2"
-13-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:15:22-74
+13-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:15:22-74
 14        android:targetPackage="com.example.inmocontrol_v2" />
-14-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:12:22-72
+14-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:12:22-72
 15
 16    <application
-16-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:7:5-9:19
+16-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:7:5-9:19
 17        android:debuggable="true"
 18        android:extractNativeLibs="false" >
 19        <uses-library android:name="android.test.runner" />
-19-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:8:9-60
-19-->D:\Users\duqhildr\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest10456538669945343878.xml:8:23-57
+19-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:8:9-60
+19-->C:\Users\duran\AndroidStudioProjects\InmoWatch\app\build\intermediates\tmp\manifest\androidTest\debug\tempFile1ProcessTestManifest17301448900221512288.xml:8:23-57
 20    </application>
 21
 22</manifest>
