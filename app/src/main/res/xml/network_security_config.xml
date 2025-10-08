@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <base-config cleartextTrafficPermitted="true" />
+    <!-- Security configuration updated for 2025 standards -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <!-- Only allow cleartext for specific domains if absolutely needed -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">your-api-server.com</domain>
+        <!-- Add other domains that specifically need cleartext here -->
+    </domain-config>
 </network-security-config>
-

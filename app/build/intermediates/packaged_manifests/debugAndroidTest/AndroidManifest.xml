@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.inmocontrol_v2.test" >
+    package="com.example.inmocontrol_v2.debug.test" >
 
     <uses-sdk
-        android:minSdkVersion="28"
+        android:minSdkVersion="30"
         android:targetSdkVersion="34" />
 
     <instrumentation
         android:name="android.test.InstrumentationTestRunner"
         android:functionalTest="false"
         android:handleProfiling="false"
-        android:label="Tests for com.example.inmocontrol_v2"
-        android:targetPackage="com.example.inmocontrol_v2" />
+        android:label="Tests for com.example.inmocontrol_v2.debug"
+        android:targetPackage="com.example.inmocontrol_v2.debug" />
 
     <application
         android:debuggable="true"

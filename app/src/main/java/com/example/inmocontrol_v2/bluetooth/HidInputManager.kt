@@ -2,15 +2,76 @@ package com.example.inmocontrol_v2.bluetooth
 
 import android.bluetooth.BluetoothDevice
 import android.util.Log
+import kotlinx.coroutines.*
 
 /**
- * HID Input Manager based on proven WearMouse implementation
- * Fixed to use correct Report IDs and structures for reliable connectivity
+ * Universal HID Input Manager - Enhanced for maximum compatibility
+ * Optimized version with async operations and improved performance
  */
 class HidInputManager(private val hidDeviceProfile: HidDeviceProfile) {
 
     companion object {
         private const val TAG = "HidInputManager"
+
+        // Universal key codes that work across platforms
+        private const val KEY_ESC = 0x29
+        private const val KEY_ENTER = 0x28
+        private const val KEY_SPACE = 0x2C
+        private const val KEY_TAB = 0x2B
+        private const val KEY_BACKSPACE = 0x2A
+        private const val KEY_DELETE = 0x4C
+        private const val KEY_HOME = 0x4A
+        private const val KEY_END = 0x4D
+
+        // Arrow keys
+        private const val KEY_RIGHT = 0x4F
+        private const val KEY_LEFT = 0x50
+        private const val KEY_DOWN = 0x51
+        private const val KEY_UP = 0x52
+
+        // Function keys
+        private const val KEY_F11 = 0x44
+
+        // Modifier keys
+        private const val MOD_CTRL = 0x01
+        private const val MOD_SHIFT = 0x02
+        private const val MOD_ALT = 0x04
+        private const val MOD_WIN = 0x08
+
+        // Platform detection cache
+        private var detectedPlatform: Platform? = null
+    }
+
+    enum class Platform {
+        WINDOWS, MACOS, LINUX, ANDROID, IOS, UNKNOWN
+    }
+
+    // Universal gesture tracking
+    private var lastActionTime = System.currentTimeMillis()
+
+    // Auto-detect target platform based on device behavior and optimize accordingly
+    private fun detectPlatform(device: BluetoothDevice): Platform {
+        detectedPlatform?.let { return it }
+
+        try {
+            // Use device name and behavior patterns to detect platform
+            val deviceName = device.name?.lowercase() ?: ""
+
+            detectedPlatform = when {
+                deviceName.contains("windows") || deviceName.contains("pc") -> Platform.WINDOWS
+                deviceName.contains("mac") || deviceName.contains("macbook") -> Platform.MACOS
+                deviceName.contains("linux") || deviceName.contains("ubuntu") -> Platform.LINUX
+                deviceName.contains("android") || deviceName.contains("phone") -> Platform.ANDROID
+                deviceName.contains("iphone") || deviceName.contains("ipad") -> Platform.IOS
+                else -> Platform.UNKNOWN
+            }
+
+            Log.d(TAG, "Detected platform: $detectedPlatform for device: ${device.name}")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Permission denied for device name", e)
+            detectedPlatform = Platform.UNKNOWN
+        }
+        return detectedPlatform ?: Platform.UNKNOWN
     }
 
     // Helper to format bytes as hex for logging
@@ -20,47 +81,59 @@ class HidInputManager(private val hidDeviceProfile: HidDeviceProfile) {
     }
 
     /**
-     * Send keyboard key press - uses Report ID 1 (matches wearmouse)
+     * Send keyboard key press - OPTIMIZED with async operations
      */
     fun sendKeyPress(device: BluetoothDevice, keyCode: Int): Boolean {
         Log.d(TAG, "Sending key press: keyCode=$keyCode")
 
-        // Create keyboard report: [modifier, reserved, key1, key2, key3, key4, key5, key6]
-        val pressReport = byteArrayOf(0, 0, keyCode.toByte(), 0, 0, 0, 0, 0)
-        Log.d(TAG, "Keyboard press report (id=${HidConstants.ID_KEYBOARD}): ${toHex(pressReport)}")
-        val pressSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_KEYBOARD.toInt(), pressReport)
+        return try {
+            // Create keyboard report: [modifier, reserved, key1, key2, key3, key4, key5, key6]
+            val pressReport = byteArrayOf(0, 0, keyCode.toByte(), 0, 0, 0, 0, 0)
+            Log.d(TAG, "Keyboard press report (id=${HidConstants.ID_KEYBOARD}): ${toHex(pressReport)}")
+            val pressSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_KEYBOARD.toInt(), pressReport)
 
-        // Small delay
-        Thread.sleep(50)
+            // Use async delay instead of blocking sleep
+            scope.launch {
+                delay(50)
+                // Send key release (all zeros)
+                val releaseReport = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
+                Log.d(TAG, "Keyboard release report (id=${HidConstants.ID_KEYBOARD}): ${toHex(releaseReport)}")
+                hidDeviceProfile.sendReport(device, HidConstants.ID_KEYBOARD.toInt(), releaseReport)
+            }
 
-        // Send key release (all zeros)
-        val releaseReport = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
-        Log.d(TAG, "Keyboard release report (id=${HidConstants.ID_KEYBOARD}): ${toHex(releaseReport)}")
-        val releaseSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_KEYBOARD.toInt(), releaseReport)
-
-        return pressSuccess && releaseSuccess
+            pressSuccess
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending key press", e)
+            false
+        }
     }
 
     /**
-     * Send keyboard key combination - uses Report ID 1
+     * Send keyboard key combination - OPTIMIZED with async operations
      */
     fun sendKeyCombo(device: BluetoothDevice, modifier: Int, keyCode: Int): Boolean {
         Log.d(TAG, "Sending key combo: modifier=$modifier, keyCode=$keyCode")
 
-        // Create keyboard report with modifier
-        val pressReport = byteArrayOf(modifier.toByte(), 0, keyCode.toByte(), 0, 0, 0, 0, 0)
-        Log.d(TAG, "Keyboard combo report (id=${HidConstants.ID_KEYBOARD}): ${toHex(pressReport)}")
-        val pressSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_KEYBOARD.toInt(), pressReport)
+        return try {
+            // Create keyboard report with modifier
+            val pressReport = byteArrayOf(modifier.toByte(), 0, keyCode.toByte(), 0, 0, 0, 0, 0)
+            Log.d(TAG, "Keyboard combo report (id=${HidConstants.ID_KEYBOARD}): ${toHex(pressReport)}")
+            val pressSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_KEYBOARD.toInt(), pressReport)
 
-        // Small delay
-        Thread.sleep(50)
+            // Use async delay instead of blocking sleep
+            scope.launch {
+                delay(50)
+                // Send key release
+                val releaseReport = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
+                Log.d(TAG, "Keyboard combo release (id=${HidConstants.ID_KEYBOARD}): ${toHex(releaseReport)}")
+                hidDeviceProfile.sendReport(device, HidConstants.ID_KEYBOARD.toInt(), releaseReport)
+            }
 
-        // Send key release
-        val releaseReport = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
-        Log.d(TAG, "Keyboard combo release (id=${HidConstants.ID_KEYBOARD}): ${toHex(releaseReport)}")
-        val releaseSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_KEYBOARD.toInt(), releaseReport)
-
-        return pressSuccess && releaseSuccess
+            pressSuccess
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending key combo", e)
+            false
+        }
     }
 
     /**
@@ -73,25 +146,31 @@ class HidInputManager(private val hidDeviceProfile: HidDeviceProfile) {
     }
 
     /**
-     * Send mouse click - uses Report ID 2
+     * Send mouse click - OPTIMIZED with async operations
      */
     fun sendMouseClick(device: BluetoothDevice, left: Boolean, right: Boolean, middle: Boolean): Boolean {
         Log.d(TAG, "Sending mouse click: left=$left, right=$right, middle=$middle")
 
-        // Send button press
-        val pressReport = createMouseReport(left, right, middle, 0, 0, 0)
-        Log.d(TAG, "Mouse press report (id=${HidConstants.ID_MOUSE}): ${toHex(pressReport)}")
-        val pressSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_MOUSE.toInt(), pressReport)
+        return try {
+            // Send button press
+            val pressReport = createMouseReport(left, right, middle, 0, 0, 0)
+            Log.d(TAG, "Mouse press report (id=${HidConstants.ID_MOUSE}): ${toHex(pressReport)}")
+            val pressSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_MOUSE.toInt(), pressReport)
 
-        // Small delay between press and release
-        Thread.sleep(50)
+            // Use async delay instead of blocking sleep
+            scope.launch {
+                delay(50)
+                // Send button release
+                val releaseReport = createMouseReport(false, false, false, 0, 0, 0)
+                Log.d(TAG, "Mouse release report (id=${HidConstants.ID_MOUSE}): ${toHex(releaseReport)}")
+                hidDeviceProfile.sendReport(device, HidConstants.ID_MOUSE.toInt(), releaseReport)
+            }
 
-        // Send button release
-        val releaseReport = createMouseReport(false, false, false, 0, 0, 0)
-        Log.d(TAG, "Mouse release report (id=${HidConstants.ID_MOUSE}): ${toHex(releaseReport)}")
-        val releaseSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_MOUSE.toInt(), releaseReport)
-
-        return pressSuccess && releaseSuccess
+            pressSuccess
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending mouse click", e)
+            false
+        }
     }
 
     /**
@@ -153,10 +232,6 @@ class HidInputManager(private val hidDeviceProfile: HidDeviceProfile) {
         return sendConsumerControl(device, HidConstants.USAGE_VOLUME_DOWN)
     }
 
-    fun sendMute(device: BluetoothDevice): Boolean {
-        return sendConsumerControl(device, HidConstants.USAGE_MUTE)
-    }
-
     /**
      * Send device/audio output switch command
      */
@@ -172,23 +247,29 @@ class HidInputManager(private val hidDeviceProfile: HidDeviceProfile) {
     private fun sendConsumerControl(device: BluetoothDevice, usage: Int): Boolean {
         Log.d(TAG, "Sending consumer control: usage=0x${usage.toString(16)}")
 
-        // Send key press - 2 bytes for 16-bit usage value
-        val pressReport = byteArrayOf(
-            (usage and 0xFF).toByte(),
-            ((usage shr 8) and 0xFF).toByte()
-        )
-        Log.d(TAG, "Consumer press report (id=${HidConstants.ID_CONSUMER}): ${toHex(pressReport)}")
-        val pressSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_CONSUMER.toInt(), pressReport)
+        return try {
+            // Send key press - 2 bytes for 16-bit usage value
+            val pressReport = byteArrayOf(
+                (usage and 0xFF).toByte(),
+                ((usage shr 8) and 0xFF).toByte()
+            )
+            Log.d(TAG, "Consumer press report (id=${HidConstants.ID_CONSUMER}): ${toHex(pressReport)}")
+            val pressSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_CONSUMER.toInt(), pressReport)
 
-        // Small delay
-        Thread.sleep(50)
+            // Use async delay instead of blocking sleep
+            scope.launch {
+                delay(50)
+                // Send key release (all zeros)
+                val releaseReport = byteArrayOf(0, 0)
+                Log.d(TAG, "Consumer release report (id=${HidConstants.ID_CONSUMER}): ${toHex(releaseReport)}")
+                hidDeviceProfile.sendReport(device, HidConstants.ID_CONSUMER.toInt(), releaseReport)
+            }
 
-        // Send key release (all zeros)
-        val releaseReport = byteArrayOf(0, 0)
-        Log.d(TAG, "Consumer release report (id=${HidConstants.ID_CONSUMER}): ${toHex(releaseReport)}")
-        val releaseSuccess = hidDeviceProfile.sendReport(device, HidConstants.ID_CONSUMER.toInt(), releaseReport)
-
-        return pressSuccess && releaseSuccess
+            pressSuccess
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending consumer control", e)
+            false
+        }
     }
 
     /**
@@ -214,182 +295,174 @@ class HidInputManager(private val hidDeviceProfile: HidDeviceProfile) {
             Log.e(TAG, "Error clearing inputs", e)
         }
     }
-}
 
-/**
- * Device-specific input profiles moved here to colocate with the low-level input manager.
- * This reduces file count and keeps related logic together.
- */
+    /**
+     * Universal platform-specific key mapping
+     */
+    fun sendUniversalKey(device: BluetoothDevice, action: String): Boolean {
+        val platform = detectPlatform(device)
 
-// InputProfile and implementations moved into the bluetooth package
-// Normalize types to use the BluetoothDevice import rather than fully-qualified names
-interface InputProfile {
-    fun sendKey(device: BluetoothDevice, keyCode: Int, modifiers: Int = 0): Boolean
-    fun moveMouse(device: BluetoothDevice, dx: Int, dy: Int): Boolean
-    fun mouseScroll(device: BluetoothDevice, x: Int, y: Int): Boolean
-    fun mouseLeftClick(device: BluetoothDevice): Boolean
-    fun mouseRightClick(device: BluetoothDevice): Boolean
-    fun mouseDoubleClick(device: BluetoothDevice): Boolean
-    fun mouseDragMove(device: BluetoothDevice, dx: Int, dy: Int): Boolean
-    fun mouseDragEnd(device: BluetoothDevice): Boolean
-    fun dpad(device: BluetoothDevice, direction: Int): Boolean
-    fun playPause(device: BluetoothDevice): Boolean
-    fun nextTrack(device: BluetoothDevice): Boolean
-    fun previousTrack(device: BluetoothDevice): Boolean
-    fun setVolume(device: BluetoothDevice, volume: Int): Boolean
-    fun volumeUp(device: BluetoothDevice): Boolean
-    fun volumeDown(device: BluetoothDevice): Boolean
-    fun switchOutput(device: BluetoothDevice): Boolean
-    fun resetInputs(device: BluetoothDevice): Boolean
-}
-
-class GenericInputProfile(private val input: HidInputManager) : InputProfile {
-    override fun sendKey(device: BluetoothDevice, keyCode: Int, modifiers: Int) =
-        if (modifiers != 0) input.sendKeyCombo(device, modifiers, keyCode) else input.sendKeyPress(device, keyCode)
-
-    override fun moveMouse(device: BluetoothDevice, dx: Int, dy: Int) = input.sendMouseMovement(device, dx, dy)
-    override fun mouseScroll(device: BluetoothDevice, x: Int, y: Int) = input.sendMouseScroll(device, y)
-    override fun mouseLeftClick(device: BluetoothDevice) = input.sendMouseClick(device, left = true, right = false, middle = false)
-    override fun mouseRightClick(device: BluetoothDevice) = input.sendMouseClick(device, left = false, right = true, middle = false)
-    override fun mouseDoubleClick(device: BluetoothDevice): Boolean {
-        val ok = input.sendMouseClick(device, left = true, right = false, middle = false)
-        Thread.sleep(50)
-        return ok && input.sendMouseClick(device, left = true, right = false, middle = false)
-    }
-    override fun mouseDragMove(device: BluetoothDevice, dx: Int, dy: Int) = input.sendMouseDrag(device, dx, dy, leftButton = true)
-    override fun mouseDragEnd(device: BluetoothDevice) = input.sendMouseDrag(device, 0, 0, leftButton = false)
-    override fun dpad(device: BluetoothDevice, direction: Int) = when(direction) {
-        0 -> input.sendKeyPress(device, 82) // UP (WearMouse: Key.UP = 82)
-        1 -> input.sendKeyPress(device, 81) // DOWN (WearMouse: Key.DOWN = 81)
-        2 -> input.sendKeyPress(device, 80) // LEFT (WearMouse: Key.LEFT = 80)
-        3 -> input.sendKeyPress(device, 79) // RIGHT (WearMouse: Key.RIGHT = 79)
-        4 -> input.sendKeyPress(device, 40) // CENTER/ENTER (WearMouse: Key.ENTER = 40)
-        5 -> { // DOWN-LEFT diagonal
-            input.sendKeyPress(device, 81) // DOWN
-            Thread.sleep(10)
-            input.sendKeyPress(device, 80) // LEFT
-        }
-        6 -> { // DOWN-RIGHT diagonal
-            input.sendKeyPress(device, 81) // DOWN
-            Thread.sleep(10)
-            input.sendKeyPress(device, 79) // RIGHT
-        }
-        7 -> { // UP-LEFT diagonal
-            input.sendKeyPress(device, 82) // UP
-            Thread.sleep(10)
-            input.sendKeyPress(device, 80) // LEFT
-        }
-        8 -> { // UP-RIGHT diagonal
-            input.sendKeyPress(device, 82) // UP
-            Thread.sleep(10)
-            input.sendKeyPress(device, 79) // RIGHT
-        }
-        else -> false
-    }
-    override fun playPause(device: BluetoothDevice) = input.sendPlayPause(device)
-    override fun nextTrack(device: BluetoothDevice) = input.sendNextTrack(device)
-    override fun previousTrack(device: BluetoothDevice) = input.sendPreviousTrack(device)
-    override fun setVolume(device: BluetoothDevice, volume: Int): Boolean = when {
-        volume > 0 -> input.sendVolumeUp(device)
-        volume < 0 -> input.sendVolumeDown(device)
-        else -> false
-    }
-    override fun volumeUp(device: BluetoothDevice) = input.sendVolumeUp(device)
-    override fun volumeDown(device: BluetoothDevice) = input.sendVolumeDown(device)
-    override fun switchOutput(device: BluetoothDevice) = input.sendOutputSwitch(device)
-    override fun resetInputs(device: BluetoothDevice): Boolean {
-        input.clearAllInputs(device)
-        return true
-    }
-}
-
-class InmoAir2InputProfile(private val input: HidInputManager) : InputProfile {
-    private val TAG = "InmoAir2Profile"
-
-    override fun sendKey(device: BluetoothDevice, keyCode: Int, modifiers: Int): Boolean {
-        Log.d(TAG, "sendKey: key=$keyCode modifiers=$modifiers")
-        val primary = if (modifiers != 0) input.sendKeyCombo(device, modifiers, keyCode) else input.sendKeyPress(device, keyCode)
-        if (primary) {
-            try { input.sendKeyPress(device, keyCode) } catch (_: Throwable) {}
-        }
-        return primary
-    }
-
-    override fun moveMouse(device: BluetoothDevice, dx: Int, dy: Int): Boolean {
-        val scale = 2.0f
-        val sdx = (dx * scale).toInt().coerceIn(-127, 127)
-        val sdy = (dy * scale).toInt().coerceIn(-127, 127)
-        return input.sendMouseMovement(device, sdx, sdy)
-    }
-
-    override fun mouseScroll(device: BluetoothDevice, x: Int, y: Int): Boolean {
-        val r1 = input.sendMouseScroll(device, y)
-        val r2 = if (y > 0) input.sendVolumeUp(device) else if (y < 0) input.sendVolumeDown(device) else true
-        return r1 || r2
-    }
-
-    override fun mouseLeftClick(device: BluetoothDevice) = input.sendMouseClick(device, left = true, right = false, middle = false)
-    override fun mouseRightClick(device: BluetoothDevice) = input.sendMouseClick(device, left = false, right = true, middle = false)
-    override fun mouseDoubleClick(device: BluetoothDevice): Boolean {
-        val ok = input.sendMouseClick(device, left = true, right = false, middle = false)
-        Thread.sleep(40)
-        return ok && input.sendMouseClick(device, left = true, right = false, middle = false)
-    }
-
-    override fun mouseDragMove(device: BluetoothDevice, dx: Int, dy: Int) = input.sendMouseDrag(device, dx, dy, leftButton = true)
-    override fun mouseDragEnd(device: BluetoothDevice) = input.sendMouseDrag(device, 0, 0, leftButton = false)
-
-    override fun dpad(device: BluetoothDevice, direction: Int): Boolean {
-        val keySent = when(direction) {
-            0 -> input.sendKeyPress(device, 82)
-            1 -> input.sendKeyPress(device, 81)
-            2 -> input.sendKeyPress(device, 80)
-            3 -> input.sendKeyPress(device, 79)
-            4 -> input.sendKeyPress(device, 40)
-            5 -> { // DOWN-LEFT diagonal
-                input.sendKeyPress(device, 81) // DOWN
-                Thread.sleep(10)
-                input.sendKeyPress(device, 80) // LEFT
+        return when (action.lowercase()) {
+            "back", "escape" -> sendKeyPress(device, KEY_ESC)
+            "enter", "confirm" -> sendKeyPress(device, KEY_ENTER)
+            "space" -> sendKeyPress(device, KEY_SPACE)
+            "tab" -> sendKeyPress(device, KEY_TAB)
+            "backspace" -> sendKeyPress(device, KEY_BACKSPACE)
+            "delete" -> sendKeyPress(device, KEY_DELETE)
+            "home" -> when (platform) {
+                Platform.MACOS -> sendKeyCombo(device, MOD_CTRL, KEY_LEFT) // Cmd+Left
+                else -> sendKeyPress(device, KEY_HOME)
             }
-            6 -> { // DOWN-RIGHT diagonal
-                input.sendKeyPress(device, 81) // DOWN
-                Thread.sleep(10)
-                input.sendKeyPress(device, 79) // RIGHT
+            "end" -> when (platform) {
+                Platform.MACOS -> sendKeyCombo(device, MOD_CTRL, KEY_RIGHT) // Cmd+Right
+                else -> sendKeyPress(device, KEY_END)
             }
-            7 -> { // UP-LEFT diagonal
-                input.sendKeyPress(device, 82) // UP
-                Thread.sleep(10)
-                input.sendKeyPress(device, 80) // LEFT
+            "copy" -> when (platform) {
+                Platform.MACOS -> sendKeyCombo(device, MOD_WIN, 0x06) // Cmd+C
+                else -> sendKeyCombo(device, MOD_CTRL, 0x06) // Ctrl+C
             }
-            8 -> { // UP-RIGHT diagonal
-                input.sendKeyPress(device, 82) // UP
-                Thread.sleep(10)
-                input.sendKeyPress(device, 79) // RIGHT
+            "paste" -> when (platform) {
+                Platform.MACOS -> sendKeyCombo(device, MOD_WIN, 0x19) // Cmd+V
+                else -> sendKeyCombo(device, MOD_CTRL, 0x19) // Ctrl+V
             }
+            "cut" -> when (platform) {
+                Platform.MACOS -> sendKeyCombo(device, MOD_WIN, 0x18) // Cmd+X
+                else -> sendKeyCombo(device, MOD_CTRL, 0x18) // Ctrl+X
+            }
+            "undo" -> when (platform) {
+                Platform.MACOS -> sendKeyCombo(device, MOD_WIN, 0x1A) // Cmd+Z
+                else -> sendKeyCombo(device, MOD_CTRL, 0x1A) // Ctrl+Z
+            }
+            "redo" -> when (platform) {
+                Platform.MACOS -> sendKeyCombo(device, MOD_WIN or MOD_SHIFT, 0x1A) // Cmd+Shift+Z
+                else -> sendKeyCombo(device, MOD_CTRL, 0x1C) // Ctrl+Y
+            }
+            "selectall" -> when (platform) {
+                Platform.MACOS -> sendKeyCombo(device, MOD_WIN, 0x04) // Cmd+A
+                else -> sendKeyCombo(device, MOD_CTRL, 0x04) // Ctrl+A
+            }
+            "fullscreen" -> sendKeyPress(device, KEY_F11)
             else -> false
         }
-        if (!keySent) {
-            try { input.sendMouseMovement(device, 0, 0) } catch (_: Throwable) {}
+    }
+
+    // D-pad methods for gamepad functionality
+    fun sendDpadUp(): Boolean = sendKey(KEY_UP, 0)
+    fun sendDpadDown(): Boolean = sendKey(KEY_DOWN, 0)
+    fun sendDpadLeft(): Boolean = sendKey(KEY_LEFT, 0)
+    fun sendDpadRight(): Boolean = sendKey(KEY_RIGHT, 0)
+    fun sendDpadCenter(): Boolean = sendKey(KEY_ENTER, 0)
+
+    // Media control methods
+    fun sendPlayPause(): Boolean = connectedDevice?.let { sendPlayPause(it) } ?: false
+    fun sendNextTrack(): Boolean = connectedDevice?.let { sendNextTrack(it) } ?: false
+    fun sendPreviousTrack(): Boolean = connectedDevice?.let { sendPreviousTrack(it) } ?: false
+    fun sendVolumeUp(): Boolean = connectedDevice?.let { sendVolumeUp(it) } ?: false
+    fun sendVolumeDown(): Boolean = connectedDevice?.let { sendVolumeDown(it) } ?: false
+    fun sendMute(): Boolean = connectedDevice?.let { sendConsumerControl(it, 0xE2) } ?: false
+
+    // Mouse methods without device parameter
+    fun sendMouseMovement(deltaX: Float, deltaY: Float): Boolean =
+        connectedDevice?.let { sendMouseMovement(it, deltaX.toInt(), deltaY.toInt()) } ?: false
+
+    fun sendLeftClick(): Boolean =
+        connectedDevice?.let { sendMouseClick(it, true, false, false) } ?: false
+
+    fun sendRightClick(): Boolean =
+        connectedDevice?.let { sendMouseClick(it, false, true, false) } ?: false
+
+    fun sendMiddleClick(): Boolean =
+        connectedDevice?.let { sendMouseClick(it, false, false, true) } ?: false
+
+    fun sendDoubleClick(): Boolean =
+        connectedDevice?.let {
+            sendMouseClick(it, true, false, false) &&
+            sendMouseClick(it, true, false, false)
+        } ?: false
+
+    fun sendScroll(deltaX: Float, deltaY: Float): Boolean =
+        connectedDevice?.let { sendMouseScroll(it, deltaY.toInt()) } ?: false
+
+    // Key methods without device parameter
+    fun sendKey(keyCode: Int, modifiers: Int = 0): Boolean =
+        connectedDevice?.let { device ->
+            if (modifiers != 0) {
+                sendKeyCombo(device, modifiers, keyCode)
+            } else {
+                sendKeyPress(device, keyCode)
+            }
+        } ?: false
+
+    fun sendText(text: String): Boolean {
+        return connectedDevice?.let { device ->
+            text.all { char ->
+                val keyCode = charToKeyCode(char)
+                if (keyCode > 0) {
+                    sendKeyPress(device, keyCode)
+                } else false
+            }
+        } ?: false
+    }
+
+    fun sendHidReport(reportId: Int, data: ByteArray): Boolean =
+        connectedDevice?.let { hidDeviceProfile.sendReport(it, reportId, data) } ?: false
+
+    private var connectedDevice: BluetoothDevice? = null
+
+    fun setConnectedDevice(device: BluetoothDevice?) {
+        connectedDevice = device
+    }
+
+    private fun charToKeyCode(char: Char): Int {
+        return when (char) {
+            'a', 'A' -> 0x04
+            'b', 'B' -> 0x05
+            'c', 'C' -> 0x06
+            'd', 'D' -> 0x07
+            'e', 'E' -> 0x08
+            'f', 'F' -> 0x09
+            'g', 'G' -> 0x0A
+            'h', 'H' -> 0x0B
+            'i', 'I' -> 0x0C
+            'j', 'J' -> 0x0D
+            'k', 'K' -> 0x0E
+            'l', 'L' -> 0x0F
+            'm', 'M' -> 0x10
+            'n', 'N' -> 0x11
+            'o', 'O' -> 0x12
+            'p', 'P' -> 0x13
+            'q', 'Q' -> 0x14
+            'r', 'R' -> 0x15
+            's', 'S' -> 0x16
+            't', 'T' -> 0x17
+            'u', 'U' -> 0x18
+            'v', 'V' -> 0x19
+            'w', 'W' -> 0x1A
+            'x', 'X' -> 0x1B
+            'y', 'Y' -> 0x1C
+            'z', 'Z' -> 0x1D
+            '1' -> 0x1E
+            '2' -> 0x1F
+            '3' -> 0x20
+            '4' -> 0x21
+            '5' -> 0x22
+            '6' -> 0x23
+            '7' -> 0x24
+            '8' -> 0x25
+            '9' -> 0x26
+            '0' -> 0x27
+            ' ' -> KEY_SPACE
+            '\n' -> KEY_ENTER
+            '\t' -> KEY_TAB
+            else -> 0
         }
-        return keySent
     }
 
-    override fun playPause(device: BluetoothDevice) = input.sendPlayPause(device)
-    override fun nextTrack(device: BluetoothDevice) = input.sendNextTrack(device)
-    override fun previousTrack(device: BluetoothDevice) = input.sendPreviousTrack(device)
+    // Add coroutine scope for async operations
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    override fun setVolume(device: BluetoothDevice, volume: Int): Boolean = when {
-        volume > 0 -> input.sendVolumeUp(device)
-        volume < 0 -> input.sendVolumeDown(device)
-        else -> false
-    }
-
-    override fun volumeUp(device: BluetoothDevice) = input.sendVolumeUp(device)
-    override fun volumeDown(device: BluetoothDevice) = input.sendVolumeDown(device)
-    override fun switchOutput(device: BluetoothDevice) = input.sendOutputSwitch(device)
-
-    override fun resetInputs(device: BluetoothDevice): Boolean {
-        input.clearAllInputs(device)
-        return true
+    // Add cleanup method
+    fun cleanup() {
+        scope.cancel()
     }
 }

@@ -3,38 +3,51 @@ package com.example.inmocontrol_v2.hid
 import android.bluetooth.BluetoothDevice
 import com.example.inmocontrol_v2.data.DeviceProfile
 
+/**
+ * HID Service API interface defining all methods for HID operations
+ */
 interface HidServiceApi {
     var currentDeviceProfile: DeviceProfile?
 
-    fun connect(device: BluetoothDevice): Boolean
-    fun disconnect(): Boolean
-    fun isDeviceConnected(): Boolean
+    // Service state methods
     fun isReady(): Boolean
+    fun isDeviceConnected(): Boolean
     fun getConnectedDevice(): BluetoothDevice?
-    fun getConnectedDevices(): List<BluetoothDevice>
 
-    // Mouse
-    fun moveMouse(x: Int, y: Int): Boolean
-    fun mouseScroll(x: Int, y: Int): Boolean
-    fun mouseLeftClick(): Boolean
-    fun mouseRightClick(): Boolean
-    fun mouseDoubleClick(): Boolean
-    fun mouseDragMove(x: Int, y: Int): Boolean
-    fun mouseDragEnd(): Boolean
+    // Connection methods
+    fun connectToDevice(device: BluetoothDevice): Boolean
+    fun disconnectFromDevice(): Boolean
+    fun startAdvertising(): Boolean
+    fun stopAdvertising(): Boolean
 
-    // D-pad / keyboard
-    fun dpad(direction: Int): Boolean
+    // Mouse input methods
+    fun sendMouseMovement(deltaX: Float, deltaY: Float): Boolean
+    fun sendLeftClick(): Boolean
+    fun sendRightClick(): Boolean
+    fun sendMiddleClick(): Boolean
+    fun sendDoubleClick(): Boolean
+    fun sendScroll(deltaX: Float, deltaY: Float): Boolean
+
+    // Keyboard input methods
     fun sendKey(keyCode: Int, modifiers: Int = 0): Boolean
+    fun sendText(text: String): Boolean
 
-    // Media
-    fun playPause(): Boolean
-    fun nextTrack(): Boolean
-    fun previousTrack(): Boolean
-    fun setVolume(volume: Int): Boolean
-    fun volumeUp(): Boolean
-    fun volumeDown(): Boolean
-    fun switchOutput(): Boolean
+    // Media control methods
+    fun sendPlayPause(): Boolean
+    fun sendNextTrack(): Boolean
+    fun sendPreviousTrack(): Boolean
+    fun sendVolumeUp(): Boolean
+    fun sendVolumeDown(): Boolean
+    fun sendMute(): Boolean
 
-    // Utility
-    fun resetInputStates(): Boolean
+    // D-pad/Gamepad methods
+    fun sendDpadUp(): Boolean
+    fun sendDpadDown(): Boolean
+    fun sendDpadLeft(): Boolean
+    fun sendDpadRight(): Boolean
+    fun sendDpadCenter(): Boolean
+
+    // Generic HID methods
+    fun sendHidReport(reportId: Int, data: ByteArray): Boolean
+    fun sendRawInput(data: ByteArray): Boolean
 }

@@ -2,9 +2,14 @@ package com.example.inmocontrol_v2.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
+import androidx.compose.material.icons.filled.Gamepad
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Mouse
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,51 +21,59 @@ import androidx.wear.compose.material.*
 import com.example.inmocontrol_v2.data.BluetoothSettingsStore
 import com.example.inmocontrol_v2.hid.HidClient
 
+/**
+ * Main menu screen, optimized for performance and clarity (2025)
+ */
 @Composable
 fun MainMenuScreen(
-    onNavigateToConnect: () -> Unit = {},
-    onNavigateToMouse: () -> Unit = {},
-    onNavigateToTouchpad: () -> Unit = {},
-    onNavigateToKeyboard: () -> Unit = {},
-    onNavigateToMedia: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
-    onNavigateToDpad: () -> Unit = {}
+    onNavigateToConnect: () -> Unit,
+    onNavigateToMouse: () -> Unit,
+    onNavigateToTouchpad: () -> Unit,
+    onNavigateToKeyboard: () -> Unit,
+    onNavigateToMedia: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToDpad: () -> Unit
 ) {
     val context = LocalContext.current
-
-    // Use real-time connection state from HidClient
     val isConnected by HidClient.isConnected.collectAsState()
-
-    // Get last device for quick reconnection
     val lastDevice by BluetoothSettingsStore.lastDeviceFlow(context).collectAsState(initial = null)
+    val connectionError by HidClient.connectionError.collectAsState()
 
-    // Clear any previous errors when screen loads
     LaunchedEffect(Unit) {
         HidClient.clearError()
     }
 
-    // Collect connection error state
-    val connectionError by HidClient.connectionError.collectAsState()
-
     Scaffold(
-        timeText = { TimeText() }
+        timeText = { TimeText(modifier = Modifier.padding(top = 8.dp)) }
     ) {
         ScalingLazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = 32.dp,
-                start = 16.dp,
-                end = 16.dp,
-                bottom = 32.dp
-            ),
+            contentPadding = PaddingValues(top = 24.dp, start = 16.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             item {
+                Text(
+                    text = "InmoControl",
+                    style = MaterialTheme.typography.title3,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            // Connection status and error handling
+            item {
                 if (connectionError != null) {
                     Text(
-                        text = connectionError ?: "",
+                        text = connectionError!!,
                         color = MaterialTheme.colors.error,
+                        style = MaterialTheme.typography.body2,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                } else if (isConnected) {
+                    Text(
+                        text = "Connected",
+                        color = MaterialTheme.colors.primary,
                         style = MaterialTheme.typography.body2,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -68,171 +81,60 @@ fun MainMenuScreen(
                 }
             }
 
-            item {
-                Text(
-                    text = "InmoControl",
-                    style = MaterialTheme.typography.title3,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
+            // Main action buttons
             if (isConnected) {
-                // Show current connection status when connected
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { /* Maybe show device info or disconnect option */ },
-                        backgroundPainter = CardDefaults.cardBackgroundPainter(
-                            startBackgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.BluetoothConnected,
-                                contentDescription = "Connected",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Connected",
-                                style = MaterialTheme.typography.body2
-                            )
-                        }
-                    }
-                }
-                // Control Buttons when connected
-                item {
-                    Button(
-                        onClick = onNavigateToMouse,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Mouse", style = MaterialTheme.typography.body2)
-                    }
-                }
-                item {
-                    Button(
-                        onClick = onNavigateToTouchpad,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Touchpad", style = MaterialTheme.typography.body2)
-                    }
-                }
-                item {
-                    Button(
-                        onClick = onNavigateToKeyboard,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Keyboard", style = MaterialTheme.typography.body2)
-                    }
-                }
-                item {
-                    Button(
-                        onClick = onNavigateToMedia,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Media", style = MaterialTheme.typography.body2)
-                    }
-                }
-                item {
-                    Button(
-                        onClick = onNavigateToDpad,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("D-Pad", style = MaterialTheme.typography.body2)
-                    }
-                }
+                item { ControlButton(text = "Mouse", icon = Icons.Default.Mouse, onClick = onNavigateToMouse) }
+                item { ControlButton(text = "Touchpad", icon = Icons.Default.TouchApp, onClick = onNavigateToTouchpad) }
+                item { ControlButton(text = "Keyboard", icon = Icons.Default.Keyboard, onClick = onNavigateToKeyboard) }
+                item { ControlButton(text = "Media", icon = Icons.Default.PlayArrow, onClick = onNavigateToMedia) }
+                item { ControlButton(text = "D-Pad", icon = Icons.Default.Gamepad, onClick = onNavigateToDpad) }
+                item { ControlButton(text = "Settings", icon = Icons.Default.Settings, onClick = onNavigateToSettings) }
             } else {
-                // Show connection status without error logs
-                lastDevice?.let { deviceMac ->
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                onNavigateToConnect()
-                            },
-                            backgroundPainter = CardDefaults.cardBackgroundPainter(
-                                startBackgroundColor = MaterialTheme.colors.secondary.copy(alpha = 0.3f)
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Bluetooth,
-                                    contentDescription = "Device",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Last Device",
-                                        style = MaterialTheme.typography.body2
-                                    )
-                                    Text(
-                                        text = "••${deviceMac.takeLast(4)}", // Show last 4 chars
-                                        style = MaterialTheme.typography.caption1
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Connect",
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colors.primary
-                                )
-                            }
+                // Connection buttons
+                item {
+                    Button(
+                        onClick = onNavigateToConnect,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Bluetooth, contentDescription = "Connect")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Connect")
                         }
                     }
                 }
-                // If no last device exists, show connect button
-                if (lastDevice == null) {
+                lastDevice?.let { device ->
                     item {
                         Button(
-                            onClick = onNavigateToConnect,
+                            onClick = {
+                                try {
+                                    HidClient.connectToDevice(device)
+                                } catch (e: SecurityException) {
+                                    HidClient.setConnectionError("Permission denied")
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = MaterialTheme.colors.surface
-                            )
+                            colors = ButtonDefaults.secondaryButtonColors()
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Add Device",
-                                    modifier = Modifier.size(16.dp)
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.BluetoothConnected, contentDescription = "Reconnect")
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Connect Device",
-                                    style = MaterialTheme.typography.body2
-                                )
+                                Text("Reconnect")
                             }
                         }
                     }
-                }
-            }
-
-            // Single settings button - always available at the bottom
-            item {
-                Button(
-                    onClick = onNavigateToSettings,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.surface
-                    )
-                ) {
-                    Text("Settings", style = MaterialTheme.typography.body2)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ControlButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    Chip(
+        label = { Text(text) },
+        icon = { Icon(imageVector = icon, contentDescription = text) },
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    )
 }

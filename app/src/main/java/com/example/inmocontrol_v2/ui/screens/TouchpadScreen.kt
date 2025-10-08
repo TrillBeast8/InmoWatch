@@ -1,8 +1,8 @@
 package com.example.inmocontrol_v2.ui.screens
 
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -16,316 +16,251 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.Text as WearText
 import com.example.inmocontrol_v2.hid.HidClient
 import com.example.inmocontrol_v2.data.DeviceProfile
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
 import kotlin.math.min
-import kotlin.math.sqrt
 
+/**
+ * Optimized TouchpadScreen with improved performance and reduced memory usage
+ */
 @Composable
 fun TouchpadScreen(
-    mode: String = "touchpad",
-    onOpenScrollPopup: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onScrollPopup: () -> Unit = {}
 ) {
-    LaunchedEffect(mode) {
-        HidClient.currentDeviceProfile = when (mode) {
-            "touchpad" -> DeviceProfile.Mouse
-            else -> DeviceProfile.Mouse // fallback
+    // Set device profile once
+    LaunchedEffect(Unit) {
+        HidClient.currentDeviceProfile = DeviceProfile.Mouse
+    }
+
+    // Optimized state management with reduced recompositions
+    var lastAction by remember { mutableStateOf("Ready") }
+    var isDragging by remember { mutableStateOf(false) }
+    var actionFeedbackVisible by remember { mutableStateOf(false) }
+
+    // Cached configuration values
+    val configuration = LocalConfiguration.current
+    val touchpadSize = remember(configuration) {
+        val minDimension = min(configuration.screenWidthDp, configuration.screenHeightDp)
+        (minDimension * 0.85f).dp
+    }
+
+    // Connection state
+    val isConnected by HidClient.isConnected.collectAsState()
+    val connectionError by HidClient.connectionError.collectAsState()
+
+    // Optimized gesture tracking with cached values
+    var lastPosition by remember { mutableStateOf(Offset.Zero) }
+
+    // Optimized feedback timing
+    LaunchedEffect(actionFeedbackVisible) {
+        if (actionFeedbackVisible) {
+            delay(1500)
+            actionFeedbackVisible = false
         }
     }
 
-    val coroutineScope = rememberCoroutineScope()
-    val lastAction = remember { mutableStateOf("Ready") }
-    val isDragging = remember { mutableStateOf(false) }
-    val actionFeedbackVisible = remember { mutableStateOf(false) }
-    var showScrollPopup by remember { mutableStateOf(false) }
-
-    // Gesture tracking
-    val tapCount = remember { mutableStateOf(0) }
-    val lastTapTime = remember { mutableStateOf(0L) }
-    val isLongPressing = remember { mutableStateOf(false) }
-    val isDragOperation = remember { mutableStateOf(false) }
-    val totalDragDistance = remember { mutableStateOf(0f) }
-
-    val configuration = LocalConfiguration.current
-    val minDimension = min(configuration.screenWidthDp.dp.value, configuration.screenHeightDp.dp.value)
-    val touchpadSize = (minDimension * 0.75f).dp
-
-    // Timing constants
-    val doubleTapWindow = 400L
-    val longPressDelay = 500L
-    val dragThreshold = 20f
-
-    // Sensitivity
-    val movementSensitivity = 2.5f
-
-    // Auto-hide feedback
-    LaunchedEffect(actionFeedbackVisible.value) {
-        if (actionFeedbackVisible.value) {
-            delay(2000)
-            actionFeedbackVisible.value = false
-            if (!isDragging.value) {
-                lastAction.value = "Ready"
+    // Optimized action handler
+    val performAction = remember {
+        { action: String, operation: () -> Unit ->
+            if (isConnected) {
+                operation()
+                lastAction = action
+                actionFeedbackVisible = true
             }
         }
     }
 
-    // Show scroll popup overlay when requested
-    if (showScrollPopup) {
-        ScrollPopupScreen(
-            parentScreen = "touchpad",
-            onBack = { showScrollPopup = false }
-        )
-        return
+    // Optimized gesture detection
+    val gestureModifier = remember(isConnected) {
+        if (isConnected) {
+            Modifier.pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        lastPosition = offset
+                        isDragging = true
+                    },
+                    onDragEnd = {
+                        isDragging = false
+                        lastPosition = Offset.Zero
+                    }
+                ) { change, _ ->
+                    if (isDragging) {
+                        val deltaX = change.position.x - lastPosition.x
+                        val deltaY = change.position.y - lastPosition.y
+
+                        // Scale movement for touchpad feel
+                        val scaledX = deltaX * 0.5f
+                        val scaledY = deltaY * 0.5f
+
+                        HidClient.sendMouseMovement(scaledX, scaledY)
+                        lastPosition = change.position
+                    }
+                }
+            }.pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        performAction("Left Click") { HidClient.sendLeftClick() }
+                    },
+                    onLongPress = {
+                        performAction("Right Click") { HidClient.sendRightClick() }
+                    },
+                    onDoubleTap = {
+                        performAction("Double Click") { HidClient.sendDoubleClick() }
+                    }
+                )
+            }
+        } else {
+            Modifier
+        }
     }
 
-    Scaffold {
-        TimeText()
+    Scaffold(timeText = { TimeText() }) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // Title with long-press to open scroll popup
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onLongPress = {
-                                showScrollPopup = true
-                            }
-                        )
-                    },
-                contentAlignment = Alignment.Center
+            // Optimized title with click-to-scroll
+            Button(
+                onClick = onScrollPopup,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.wear.compose.material.ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Transparent
+                )
             ) {
                 WearText(
-                    text = "Touchpad • Hold for scroll",
-                    fontSize = 14.sp,
-                    color = Color(0xFFCCCCCC),
+                    text = "Touchpad",
+                    style = androidx.wear.compose.material.MaterialTheme.typography.title2,
+                    textAlign = TextAlign.Center,
+                    color = androidx.wear.compose.material.MaterialTheme.colors.primary
+                )
+            }
+
+            // Connection status - only show when not connected
+            if (!isConnected) {
+                WearText(
+                    text = connectionError ?: "Not connected",
+                    color = androidx.wear.compose.material.MaterialTheme.colors.error,
+                    style = androidx.wear.compose.material.MaterialTheme.typography.caption1,
                     textAlign = TextAlign.Center
                 )
             }
 
-            // Enhanced touchpad with unified gesture handling
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Optimized touchpad area
             Box(
                 modifier = Modifier
                     .size(touchpadSize)
                     .clip(CircleShape)
-                    .background(Color(0xFF1A1A1A))
-                    .pointerInput(Unit) {
-                        var isPressed = false
-                        var longPressTriggered = false
-                        var lastPosition = Offset.Zero
-
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-
-                                when (event.type) {
-                                    PointerEventType.Press -> {
-                                        val pointer = event.changes.first()
-                                        isPressed = true
-                                        longPressTriggered = false
-                                        lastPosition = pointer.position
-                                        totalDragDistance.value = 0f
-
-                                        // Start long press detection
-                                        coroutineScope.launch {
-                                            delay(longPressDelay)
-                                            if (isPressed && !longPressTriggered && totalDragDistance.value < dragThreshold) {
-                                                longPressTriggered = true
-                                                isLongPressing.value = true
-                                                lastAction.value = "Enter/OK"
-                                                actionFeedbackVisible.value = true
-                                                try {
-                                                    HidClient.sendInmoConfirm()
-                                                } catch (e: Exception) {
-                                                    Log.e("TouchpadScreen", "Enter error: ${e.message}")
-                                                }
-                                            }
-                                        }
-                                        pointer.consume()
-                                    }
-
-                                    PointerEventType.Move -> {
-                                        if (isPressed) {
-                                            val pointer = event.changes.first()
-                                            val currentPosition = pointer.position
-                                            val delta = currentPosition - lastPosition
-
-                                            // Track total movement for drag threshold
-                                            totalDragDistance.value += sqrt(delta.x * delta.x + delta.y * delta.y)
-
-                                            if (totalDragDistance.value > dragThreshold) {
-                                                if (longPressTriggered && !isDragOperation.value) {
-                                                    // Start drag operation
-                                                    isDragOperation.value = true
-                                                    isDragging.value = true
-                                                    lastAction.value = "Dragging"
-                                                    actionFeedbackVisible.value = true
-                                                    try {
-                                                        HidClient.mouseDragMove(0, 0)
-                                                    } catch (e: Exception) {
-                                                        Log.e("TouchpadScreen", "Drag start error: ${e.message}")
-                                                    }
-                                                }
-
-                                                // Handle movement/dragging
-                                                try {
-                                                    val scaledX = (delta.x * movementSensitivity).toInt()
-                                                    val scaledY = (delta.y * movementSensitivity).toInt()
-
-                                                    if (isDragOperation.value) {
-                                                        // Continue drag operation
-                                                        HidClient.mouseDragMove(scaledX, scaledY)
-                                                    } else {
-                                                        // Normal cursor movement
-                                                        HidClient.moveMouse(scaledX, scaledY)
-                                                    }
-                                                } catch (e: Exception) {
-                                                    Log.e("TouchpadScreen", "Movement error: ${e.message}")
-                                                }
-                                            }
-
-                                            lastPosition = currentPosition
-                                            pointer.consume()
-                                        }
-                                    }
-
-                                    PointerEventType.Release -> {
-                                        val pointer = event.changes.first()
-                                        val currentTime = System.currentTimeMillis()
-
-                                        if (isPressed) {
-                                            if (!longPressTriggered && totalDragDistance.value < dragThreshold) {
-                                                // Handle tap gestures
-                                                val timeSinceLastTap = currentTime - lastTapTime.value
-
-                                                if (timeSinceLastTap < doubleTapWindow && tapCount.value == 1) {
-                                                    // Double tap
-                                                    tapCount.value = 0
-                                                    lastAction.value = "Double Tap"
-                                                    actionFeedbackVisible.value = true
-                                                    try {
-                                                        HidClient.mouseDoubleClick()
-                                                    } catch (e: Exception) {
-                                                        Log.e("TouchpadScreen", "Double tap error: ${e.message}")
-                                                    }
-                                                } else {
-                                                    // First tap
-                                                    tapCount.value = 1
-                                                    lastTapTime.value = currentTime
-
-                                                    // Wait to see if second tap comes
-                                                    coroutineScope.launch {
-                                                        delay(doubleTapWindow)
-                                                        if (tapCount.value == 1) {
-                                                            // Single tap
-                                                            tapCount.value = 0
-                                                            lastAction.value = "Left Click"
-                                                            actionFeedbackVisible.value = true
-                                                            try {
-                                                                HidClient.mouseLeftClick()
-                                                            } catch (e: Exception) {
-                                                                Log.e("TouchpadScreen", "Left click error: ${e.message}")
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                            if (isDragOperation.value) {
-                                                // End drag operation
-                                                isDragOperation.value = false
-                                                isDragging.value = false
-                                                lastAction.value = "Drag End"
-                                                actionFeedbackVisible.value = true
-                                                try {
-                                                    HidClient.mouseDragEnd()
-                                                } catch (e: Exception) {
-                                                    Log.e("TouchpadScreen", "Drag end error: ${e.message}")
-                                                }
-                                            }
-
-                                            isPressed = false
-                                            longPressTriggered = false
-                                            isLongPressing.value = false
-                                            totalDragDistance.value = 0f
-                                        }
-                                        pointer.consume()
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    .background(
+                        androidx.wear.compose.material.MaterialTheme.colors.surface.copy(alpha = 0.1f)
+                    )
+                    .then(gestureModifier),
+                contentAlignment = Alignment.Center
             ) {
-                // Visual feedback
+                // Optimized visual feedback
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val center = Offset(size.width / 2f, size.height / 2f)
-                    val radius = size.minDimension / 2f
+                    val center = Offset(size.width / 2, size.height / 2)
+                    val radius = size.minDimension / 2
 
-                    // Outer border
+                    // Draw outer circle
                     drawCircle(
-                        color = Color(0xFF404040),
-                        radius = radius - 2.dp.toPx(),
+                        color = if (isConnected) Color.White.copy(alpha = 0.3f)
+                        else Color.Gray.copy(alpha = 0.2f),
+                        radius = radius,
                         center = center,
                         style = Stroke(width = 2.dp.toPx())
                     )
 
-                    // Center dot
-                    drawCircle(
-                        color = Color(0xFF606060),
-                        radius = 4.dp.toPx(),
-                        center = center
-                    )
-
-                    // Drag indicator
-                    if (isDragging.value) {
+                    // Draw active feedback
+                    if (isDragging) {
                         drawCircle(
-                            color = Color(0xFF00FF00).copy(alpha = 0.3f),
-                            radius = radius - 10.dp.toPx(),
+                            color = Color.White.copy(alpha = 0.4f),
+                            radius = radius * 0.7f,
                             center = center
+                        )
+                    }
+
+                    if (actionFeedbackVisible) {
+                        drawCircle(
+                            color = Color.Blue.copy(alpha = 0.3f),
+                            radius = radius * 0.5f,
+                            center = center
+                        )
+                    }
+                }
+
+                // Centered instruction text
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    WearText(
+                        text = if (isConnected) "Drag: Move cursor" else "Not Connected",
+                        style = androidx.wear.compose.material.MaterialTheme.typography.caption2,
+                        color = Color.White.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center
+                    )
+                    if (isConnected) {
+                        WearText(
+                            text = "Tap: Left Click",
+                            style = androidx.wear.compose.material.MaterialTheme.typography.caption2,
+                            color = Color.White.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center
+                        )
+                        WearText(
+                            text = "Hold: Right Click",
+                            style = androidx.wear.compose.material.MaterialTheme.typography.caption2,
+                            color = Color.White.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Status and action feedback
-            if (actionFeedbackVisible.value) {
+            // Optimized action feedback
+            if (actionFeedbackVisible && isConnected) {
                 WearText(
-                    text = lastAction.value,
-                    fontSize = 12.sp,
-                    color = when {
-                        isDragging.value -> Color(0xFF00FF00)
-                        isLongPressing.value -> Color(0xFFFFAA00)
-                        else -> Color(0xFFCCCCCC)
-                    },
-                    textAlign = TextAlign.Center
+                    text = "✓ $lastAction",
+                    color = androidx.wear.compose.material.MaterialTheme.colors.secondary,
+                    style = androidx.wear.compose.material.MaterialTheme.typography.caption1,
+                    fontSize = 12.sp
                 )
             }
 
-            // Instructions
-            WearText(
-                text = "Tap: Click • Double tap: Double click • Hold: Enter/OK • Hold + Move: Drag",
-                fontSize = 8.sp,
-                color = Color(0xFF888888),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Optimized control buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = {
+                        performAction("Middle Click") { HidClient.sendMiddleClick() }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = isConnected,
+                    colors = androidx.wear.compose.material.ButtonDefaults.buttonColors(
+                        backgroundColor = androidx.wear.compose.material.MaterialTheme.colors.primary
+                    )
+                ) {
+                    WearText("Mid", fontSize = 10.sp)
+                }
+
+                Button(
+                    onClick = onBack,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    WearText("Back", fontSize = 10.sp)
+                }
+            }
         }
     }
 }

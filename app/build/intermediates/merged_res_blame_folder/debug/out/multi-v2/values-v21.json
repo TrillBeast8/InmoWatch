@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.inmocontrol_v2.app-mergeDebugResources-58:/values-v21/values-v21.xml",
+            "outputFile": "com.example.inmocontrol_v2.app-mergeDebugResources-61:/values-v21/values-v21.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\duran\\.gradle\\caches\\8.13\\transforms\\68e0bc3f7e52679be18ac1c2a1a2531f\\transformed\\core-1.12.0\\res\\values-v21\\values-v21.xml",
+                    "source": "D:\\Users\\duqhildr\\.gradle\\caches\\8.13\\transforms\\68e0bc3f7e52679be18ac1c2a1a2531f\\transformed\\core-1.12.0\\res\\values-v21\\values-v21.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,13",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4",

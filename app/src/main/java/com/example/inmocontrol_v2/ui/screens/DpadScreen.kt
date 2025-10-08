@@ -2,17 +2,10 @@ package com.example.inmocontrol_v2.ui.screens
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -29,10 +22,11 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun DpadScreen(
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onScrollPopup: () -> Unit = {}
 ) {
     LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.GenericHid
+        HidClient.currentDeviceProfile = DeviceProfile.Generic
     }
 
     var pressedButton by remember { mutableStateOf<String?>(null) }
@@ -285,6 +279,14 @@ fun DpadScreen(
                         text = if (isScrollMode) "D-Pad" else "Scroll",
                         fontSize = 10.sp
                     )
+                }
+
+                // Scroll popup button
+                Button(
+                    onClick = onScrollPopup,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface)
+                ) {
+                    WearText("Scroll", fontSize = 10.sp)
                 }
 
                 // Back button

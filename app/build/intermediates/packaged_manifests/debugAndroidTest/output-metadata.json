@@ -4,7 +4,7 @@
     "type": "PACKAGED_MANIFESTS",
     "kind": "Directory"
   },
-  "applicationId": "com.example.inmocontrol_v2.test",
+  "applicationId": "com.example.inmocontrol_v2.debug.test",
   "variantName": "debugAndroidTest",
   "elements": [
     {

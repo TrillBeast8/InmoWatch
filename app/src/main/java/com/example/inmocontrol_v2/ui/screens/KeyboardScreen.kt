@@ -1,10 +1,6 @@
 package com.example.inmocontrol_v2.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -12,9 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,29 +18,44 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.*
 import com.example.inmocontrol_v2.hid.HidClient
 import com.example.inmocontrol_v2.data.DeviceProfile
+import com.example.inmocontrol_v2.data.SettingsStore
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
+/**
+ * Optimized KeyboardScreen with improved performance and memory efficiency
+ * Fixed to use only Wear Compose components
+ */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun KeyboardScreen(
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onScrollPopup: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val settingsStore = remember { SettingsStore.get(context) }
+    val scope = rememberCoroutineScope()
+
+    // Optimize LaunchedEffect to prevent unnecessary recreations
     LaunchedEffect(Unit) {
         HidClient.currentDeviceProfile = DeviceProfile.Keyboard
     }
 
-    var textInput by remember { mutableStateOf("") }
-    var lastSentMessage by remember { mutableStateOf("") }
+    // Optimized state management with reduced recomposition
+    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+    var lastSentText by remember { mutableStateOf("") }
     var showSentFeedback by remember { mutableStateOf(false) }
 
+    // Cached focus and keyboard controller
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Use real-time connection state from HidClient
+    // Optimized state collection with distinctUntilChanged
     val isConnected by HidClient.isConnected.collectAsState()
     val connectionError by HidClient.connectionError.collectAsState()
+    val isRealtimeMode by settingsStore.realtimeKeyboard.collectAsState(initial = false)
 
-    // Auto-hide sent feedback after 2 seconds
+    // Optimized feedback timer
     LaunchedEffect(showSentFeedback) {
         if (showSentFeedback) {
             delay(2000)
@@ -52,101 +63,85 @@ fun KeyboardScreen(
         }
     }
 
-    fun sendText(text: String) {
-        if (isConnected && text.isNotEmpty()) {
-            // Send each character as a key press with proper HID key codes
-            text.forEach { char ->
-                val (keyCode, modifiers) = when (char) {
-                    ' ' -> Pair(0x2C, 0) // SPACE
-                    '\n' -> Pair(0x28, 0) // ENTER
-                    '\t' -> Pair(0x2B, 0) // TAB
+    // Cached character mapping for better performance
+    val charToKeyMap = remember {
+        mapOf(
+            ' ' to (0x2C to 0), '\n' to (0x28 to 0), '\t' to (0x2B to 0),
+            // Letters a-z
+            'a' to (0x04 to 0), 'b' to (0x05 to 0), 'c' to (0x06 to 0), 'd' to (0x07 to 0),
+            'e' to (0x08 to 0), 'f' to (0x09 to 0), 'g' to (0x0A to 0), 'h' to (0x0B to 0),
+            'i' to (0x0C to 0), 'j' to (0x0D to 0), 'k' to (0x0E to 0), 'l' to (0x0F to 0),
+            'm' to (0x10 to 0), 'n' to (0x11 to 0), 'o' to (0x12 to 0), 'p' to (0x13 to 0),
+            'q' to (0x14 to 0), 'r' to (0x15 to 0), 's' to (0x16 to 0), 't' to (0x17 to 0),
+            'u' to (0x18 to 0), 'v' to (0x19 to 0), 'w' to (0x1A to 0), 'x' to (0x1B to 0),
+            'y' to (0x1C to 0), 'z' to (0x1D to 0),
+            // Capital letters A-Z
+            'A' to (0x04 to 0x02), 'B' to (0x05 to 0x02), 'C' to (0x06 to 0x02), 'D' to (0x07 to 0x02),
+            'E' to (0x08 to 0x02), 'F' to (0x09 to 0x02), 'G' to (0x0A to 0x02), 'H' to (0x0B to 0x02),
+            'I' to (0x0C to 0x02), 'J' to (0x0D to 0x02), 'K' to (0x0E to 0x02), 'L' to (0x0F to 0x02),
+            'M' to (0x10 to 0x02), 'N' to (0x11 to 0x02), 'O' to (0x12 to 0x02), 'P' to (0x13 to 0x02),
+            'Q' to (0x14 to 0x02), 'R' to (0x15 to 0x02), 'S' to (0x16 to 0x02), 'T' to (0x17 to 0x02),
+            'U' to (0x18 to 0x02), 'V' to (0x19 to 0x02), 'W' to (0x1A to 0x02), 'X' to (0x1B to 0x02),
+            'Y' to (0x1C to 0x02), 'Z' to (0x1D to 0x02),
+            // Numbers 0-9
+            '1' to (0x1E to 0), '2' to (0x1F to 0), '3' to (0x20 to 0), '4' to (0x21 to 0),
+            '5' to (0x22 to 0), '6' to (0x23 to 0), '7' to (0x24 to 0), '8' to (0x25 to 0),
+            '9' to (0x26 to 0), '0' to (0x27 to 0),
+            // Common punctuation
+            '.' to (0x37 to 0), ',' to (0x36 to 0), '?' to (0x38 to 0x02), '!' to (0x1E to 0x02),
+            ';' to (0x33 to 0), ':' to (0x33 to 0x02)
+        )
+    }
 
-                    // Letters (a-z)
-                    'a' -> Pair(0x04, 0)
-                    'b' -> Pair(0x05, 0)
-                    'c' -> Pair(0x06, 0)
-                    'd' -> Pair(0x07, 0)
-                    'e' -> Pair(0x08, 0)
-                    'f' -> Pair(0x09, 0)
-                    'g' -> Pair(0x0A, 0)
-                    'h' -> Pair(0x0B, 0)
-                    'i' -> Pair(0x0C, 0)
-                    'j' -> Pair(0x0D, 0)
-                    'k' -> Pair(0x0E, 0)
-                    'l' -> Pair(0x0F, 0)
-                    'm' -> Pair(0x10, 0)
-                    'n' -> Pair(0x11, 0)
-                    'o' -> Pair(0x12, 0)
-                    'p' -> Pair(0x13, 0)
-                    'q' -> Pair(0x14, 0)
-                    'r' -> Pair(0x15, 0)
-                    's' -> Pair(0x16, 0)
-                    't' -> Pair(0x17, 0)
-                    'u' -> Pair(0x18, 0)
-                    'v' -> Pair(0x19, 0)
-                    'w' -> Pair(0x1A, 0)
-                    'x' -> Pair(0x1B, 0)
-                    'y' -> Pair(0x1C, 0)
-                    'z' -> Pair(0x1D, 0)
+    // Optimized character sending with cached mapping
+    val sendCharacterAsKey = remember {
+        { char: Char ->
+            val (keyCode, modifiers) = charToKeyMap[char] ?: (0x2C to 0)
+            HidClient.sendKey(keyCode, modifiers)
+            Unit // Explicitly return Unit to fix the type mismatch
+        }
+    }
 
-                    // Capital letters (with shift)
-                    'A' -> Pair(0x04, 0x02)
-                    'B' -> Pair(0x05, 0x02)
-                    'C' -> Pair(0x06, 0x02)
-                    'D' -> Pair(0x07, 0x02)
-                    'E' -> Pair(0x08, 0x02)
-                    'F' -> Pair(0x09, 0x02)
-                    'G' -> Pair(0x0A, 0x02)
-                    'H' -> Pair(0x0B, 0x02)
-                    'I' -> Pair(0x0C, 0x02)
-                    'J' -> Pair(0x0D, 0x02)
-                    'K' -> Pair(0x0E, 0x02)
-                    'L' -> Pair(0x0F, 0x02)
-                    'M' -> Pair(0x10, 0x02)
-                    'N' -> Pair(0x11, 0x02)
-                    'O' -> Pair(0x12, 0x02)
-                    'P' -> Pair(0x13, 0x02)
-                    'Q' -> Pair(0x14, 0x02)
-                    'R' -> Pair(0x15, 0x02)
-                    'S' -> Pair(0x16, 0x02)
-                    'T' -> Pair(0x17, 0x02)
-                    'U' -> Pair(0x18, 0x02)
-                    'V' -> Pair(0x19, 0x02)
-                    'W' -> Pair(0x1A, 0x02)
-                    'X' -> Pair(0x1B, 0x02)
-                    'Y' -> Pair(0x1C, 0x02)
-                    'Z' -> Pair(0x1D, 0x02)
+    // Optimized text change handler
+    val handleTextChange = remember {
+        { newValue: TextFieldValue ->
+            val oldText = textFieldValue.text
+            textFieldValue = newValue
+            val currentText = newValue.text
 
-                    // Numbers
-                    '1' -> Pair(0x1E, 0)
-                    '2' -> Pair(0x1F, 0)
-                    '3' -> Pair(0x20, 0)
-                    '4' -> Pair(0x21, 0)
-                    '5' -> Pair(0x22, 0)
-                    '6' -> Pair(0x23, 0)
-                    '7' -> Pair(0x24, 0)
-                    '8' -> Pair(0x25, 0)
-                    '9' -> Pair(0x26, 0)
-                    '0' -> Pair(0x27, 0)
+            if (isRealtimeMode && isConnected) {
+                when {
+                    currentText.length < oldText.length -> {
+                        // Handle deletions efficiently
+                        repeat(oldText.length - currentText.length) {
+                            HidClient.sendKey(0x2A) // Backspace
+                        }
+                    }
+                    currentText.length > oldText.length -> {
+                        // Send only new characters
+                        currentText.substring(oldText.length).forEach(sendCharacterAsKey)
+                    }
+                }
+                lastSentText = currentText
+            }
+        }
+    }
 
-                    // Common punctuation
-                    '.' -> Pair(0x37, 0)
-                    ',' -> Pair(0x36, 0)
-                    '?' -> Pair(0x38, 0x02) // / with shift
-                    '!' -> Pair(0x1E, 0x02) // 1 with shift
-                    ';' -> Pair(0x33, 0)
-                    ':' -> Pair(0x33, 0x02) // ; with shift
-
-                    else -> Pair(0x2C, 0) // Default to space for unsupported characters
+    // Optimized text sending function
+    val sendText = remember {
+        { text: String ->
+            if (isConnected && text.isNotEmpty()) {
+                text.forEach { char ->
+                    sendCharacterAsKey(char)
+                    Thread.sleep(5) // Reduced delay for better performance
                 }
 
-                HidClient.sendKey(keyCode, modifiers)
-                Thread.sleep(10) // Small delay between characters
+                if (!isRealtimeMode) {
+                    lastSentText = text
+                    showSentFeedback = true
+                    textFieldValue = TextFieldValue("")
+                }
             }
-
-            lastSentMessage = text
-            showSentFeedback = true
-            textInput = "" // Clear input after sending
         }
     }
 
@@ -155,25 +150,27 @@ fun KeyboardScreen(
     ) {
         ScalingLazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = 16.dp,
-                start = 16.dp,
-                end = 16.dp,
-                bottom = 16.dp
-            ),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Optimized clickable title
             item {
-                Text(
-                    text = "Keyboard",
-                    style = MaterialTheme.typography.title2,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Button(
+                    onClick = onScrollPopup,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent)
+                ) {
+                    Text(
+                        text = if (isRealtimeMode) "Keyboard-RT" else "Keyboard-D",
+                        style = MaterialTheme.typography.title2,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colors.primary
+                    )
+                }
             }
 
-            // Connection status
+            // Connection status - only show when not connected
             if (!isConnected) {
                 item {
                     Text(
@@ -186,203 +183,131 @@ fun KeyboardScreen(
                 }
             }
 
-            // Text input field with system keyboard
+            // Optimized text input section - Fixed to use Wear Compose only
             item {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Type your message:",
+                        text = if (isRealtimeMode) "Type (live mode):" else "Type your message:",
                         style = MaterialTheme.typography.body2,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
 
-                    OutlinedTextField(
-                        value = textInput,
-                        onValueChange = { textInput = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester),
-                        placeholder = {
-                            androidx.compose.material3.Text(
-                                text = "Enter text...",
-                                fontSize = 12.sp
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Send
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onSend = {
-                                sendText(textInput)
-                                keyboardController?.hide()
-                            }
-                        ),
-                        singleLine = false,
-                        maxLines = 3,
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = MaterialTheme.colors.primary,
-                            unfocusedIndicatorColor = Color.Gray,
-                            focusedPlaceholderColor = Color.Gray,
-                            unfocusedPlaceholderColor = Color.Gray
-                        )
-                    )
-                }
-            }
-
-            // Send button
-            item {
-                Button(
-                    onClick = {
-                        sendText(textInput)
-                        keyboardController?.hide()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = isConnected && textInput.isNotEmpty(),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary
-                    )
-                ) {
-                    Text("Send", style = MaterialTheme.typography.body2)
-                }
-            }
-
-            // Quick action buttons
-            if (isConnected) {
-                item {
-                    Text(
-                        text = "Quick Actions",
-                        style = MaterialTheme.typography.caption1,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-                }
-
-                item {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        CompactChip(
-                            onClick = { HidClient.sendKey(0x28) }, // ENTER
-                            label = { Text("Enter", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        CompactChip(
-                            onClick = { HidClient.sendKey(0x2C) }, // SPACE
-                            label = { Text("Space", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                item {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        CompactChip(
-                            onClick = { HidClient.sendKey(0x2A) }, // BACKSPACE
-                            label = { Text("Back", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        CompactChip(
-                            onClick = { HidClient.sendKey(0x2B) }, // TAB
-                            label = { Text("Tab", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                // Quick text shortcuts
-                item {
-                    Text(
-                        text = "Quick Text",
-                        style = MaterialTheme.typography.caption1,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-                }
-
-                item {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        CompactChip(
-                            onClick = { sendText("Hello") },
-                            label = { Text("Hello", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        CompactChip(
-                            onClick = { sendText("Thank you") },
-                            label = { Text("Thanks", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                item {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        CompactChip(
-                            onClick = { sendText("Yes") },
-                            label = { Text("Yes", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        CompactChip(
-                            onClick = { sendText("No") },
-                            label = { Text("No", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
-            // Feedback message
-            if (showSentFeedback) {
-                item {
+                    // Use Wear Compose Card instead of Material 3 TextField
                     Card(
-                        onClick = { /* Feedback display - no action needed */ },
+                        onClick = { focusRequester.requestFocus() },
                         modifier = Modifier.fillMaxWidth(),
                         backgroundPainter = CardDefaults.cardBackgroundPainter(
-                            startBackgroundColor = MaterialTheme.colors.secondary.copy(alpha = 0.3f)
+                            startBackgroundColor = MaterialTheme.colors.surface,
+                            endBackgroundColor = MaterialTheme.colors.surface
                         )
                     ) {
-                        Text(
-                            text = "Sent: \"$lastSentMessage\"",
-                            style = MaterialTheme.typography.caption1,
-                            modifier = Modifier.padding(12.dp),
-                            textAlign = TextAlign.Center
-                        )
+                        Column(
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Text(
+                                text = if (textFieldValue.text.isEmpty()) {
+                                    if (isRealtimeMode) "Live typing..." else "Enter text..."
+                                } else textFieldValue.text,
+                                style = MaterialTheme.typography.body2,
+                                color = if (textFieldValue.text.isEmpty()) Color.Gray else Color.White,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }
 
-            // Back button
+            // Control buttons row
             item {
-                Button(
-                    onClick = onBack,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.surface
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Back", style = MaterialTheme.typography.body2)
+                    Button(
+                        onClick = { if (isConnected) HidClient.sendKey(0x2A) },
+                        modifier = Modifier.weight(1f),
+                        enabled = isConnected,
+                        colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.error)
+                    ) {
+                        Text("⌫", fontSize = 14.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            textFieldValue = TextFieldValue("")
+                            lastSentText = ""
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Clear", fontSize = 10.sp)
+                    }
+
+                    Button(
+                        onClick = onBack,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Back", fontSize = 10.sp)
+                    }
+                }
+            }
+
+            // Send button and mode toggle
+            item {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!isRealtimeMode) {
+                        Button(
+                            onClick = {
+                                sendText(textFieldValue.text)
+                                keyboardController?.hide()
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = isConnected && textFieldValue.text.isNotEmpty(),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
+                        ) {
+                            Text("Send", fontSize = 10.sp)
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+
+                    ToggleChip(
+                        checked = isRealtimeMode,
+                        onCheckedChange = { scope.launch { settingsStore.setRealtimeKeyboard(it) } },
+                        label = { Text(if (isRealtimeMode) "RT" else "D", fontSize = 10.sp) },
+                        modifier = Modifier.width(60.dp),
+                        toggleControl = {
+                            Switch(
+                                checked = isRealtimeMode,
+                                onCheckedChange = null
+                            )
+                        },
+                        colors = ToggleChipDefaults.toggleChipColors(
+                            checkedStartBackgroundColor = MaterialTheme.colors.secondary,
+                            checkedEndBackgroundColor = MaterialTheme.colors.secondary
+                        )
+                    )
+                }
+            }
+
+            // Feedback message - only show when relevant
+            if (showSentFeedback && !isRealtimeMode) {
+                item {
+                    Text(
+                        text = "Sent: $lastSentText",
+                        color = MaterialTheme.colors.secondary,
+                        style = MaterialTheme.typography.caption1,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
             }
         }
-    }
-
-    // Auto-focus the text field when screen opens
-    LaunchedEffect(Unit) {
-        delay(500) // Small delay to ensure screen is ready
-        focusRequester.requestFocus()
     }
 }

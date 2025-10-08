@@ -1,22 +1,14 @@
 package com.example.inmocontrol_v2.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
-import androidx.wear.compose.material.Button as WearButton
-import androidx.wear.compose.material.Text as WearText
 import com.example.inmocontrol_v2.hid.HidClient
 import kotlinx.coroutines.delay
 
@@ -136,14 +128,14 @@ fun ScrollPopupScreen(
                     .padding(bottom = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                WearButton(
+                Button(
                     onClick = onBack,
                     modifier = Modifier.size(120.dp, 32.dp),
                     colors = ButtonDefaults.buttonColors(
                         backgroundColor = Color.Transparent
                     )
                 ) {
-                    WearText(
+                    Text(
                         text = "${parentScreen.replaceFirstChar { it.uppercaseChar() }} ${currentMode.name.lowercase().replaceFirstChar { it.uppercaseChar() }}",
                         style = MaterialTheme.typography.title3,
                         color = Color(0xFF9C27B0),
@@ -155,7 +147,7 @@ fun ScrollPopupScreen(
 
             // Connection status
             if (!isConnected) {
-                WearText(
+                Text(
                     text = connectionError ?: "Not connected",
                     style = MaterialTheme.typography.caption1,
                     color = MaterialTheme.colors.error,
@@ -164,7 +156,7 @@ fun ScrollPopupScreen(
             }
 
             // Instructions
-            WearText(
+            Text(
                 text = if (currentMode == PopupMode.SCROLL)
                     "Use arrows to scroll (4-way only)"
                 else
@@ -187,17 +179,12 @@ fun ScrollPopupScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // UP-LEFT (7) - ESC/Back key in both modes
-                    WearButton(
+                    Button(
                         onClick = {
                             if (isConnected) {
                                 pressedButton = "UP_LEFT"
-                                try {
-                                    // Send ESC key (keycode 111) to target device
-                                    HidClient.sendKey(111) // Android KEYCODE_ESCAPE
-                                } catch (e: Exception) {
-                                    // Fallback to back key if ESC fails
-                                    HidClient.sendBack()
-                                }
+                                // Use universal ESC key that works across all devices
+                                HidClient.sendKey(0x29) // HID scan code for ESC key
                             }
                         },
                         modifier = Modifier.size(36.dp),
@@ -207,11 +194,11 @@ fun ScrollPopupScreen(
                             else Color(0xFFFF5722) // Orange color to indicate special ESC function
                         )
                     ) {
-                        WearText("ESC", fontSize = 8.sp, color = Color.White)
+                        Text("ESC", fontSize = 8.sp, color = Color.White)
                     }
 
                     // UP (0) - works in both modes
-                    WearButton(
+                    Button(
                         onClick = {
                             when (currentMode) {
                                 PopupMode.SCROLL -> onScrollAction("UP", 0, -1)
@@ -225,7 +212,7 @@ fun ScrollPopupScreen(
                             else if (currentMode == PopupMode.SCROLL) Color(0xFF9C27B0) else MaterialTheme.colors.primary
                         )
                     ) {
-                        WearText(
+                        Text(
                             if (currentMode == PopupMode.SCROLL) "⬆" else "↑",
                             fontSize = 14.sp,
                             color = Color.White
@@ -233,7 +220,7 @@ fun ScrollPopupScreen(
                     }
 
                     // UP-RIGHT (8) - only works in DPAD mode
-                    WearButton(
+                    Button(
                         onClick = { if (currentMode == PopupMode.DPAD) onDpadAction("UP_RIGHT", 8) },
                         modifier = Modifier.size(36.dp),
                         enabled = isConnected && currentMode == PopupMode.DPAD,
@@ -243,7 +230,7 @@ fun ScrollPopupScreen(
                             else MaterialTheme.colors.primary
                         )
                     ) {
-                        WearText("↗", fontSize = 12.sp, color = Color.White)
+                        Text("↗", fontSize = 12.sp, color = Color.White)
                     }
                 }
 
@@ -253,7 +240,7 @@ fun ScrollPopupScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // LEFT (2) - works in both modes
-                    WearButton(
+                    Button(
                         onClick = {
                             when (currentMode) {
                                 PopupMode.SCROLL -> onScrollAction("LEFT", -1, 0)
@@ -267,7 +254,7 @@ fun ScrollPopupScreen(
                             else if (currentMode == PopupMode.SCROLL) Color(0xFF9C27B0) else MaterialTheme.colors.primary
                         )
                     ) {
-                        WearText(
+                        Text(
                             if (currentMode == PopupMode.SCROLL) "⬅" else "←",
                             fontSize = 14.sp,
                             color = Color.White
@@ -275,7 +262,7 @@ fun ScrollPopupScreen(
                     }
 
                     // CENTER - OK/Enter button (works in both modes)
-                    WearButton(
+                    Button(
                         onClick = {
                             if (isConnected) {
                                 handleCenterButtonClick()
@@ -288,11 +275,11 @@ fun ScrollPopupScreen(
                             else if (currentMode == PopupMode.SCROLL) Color(0xFF9C27B0) else MaterialTheme.colors.primary
                         )
                     ) {
-                        WearText("●", fontSize = 14.sp, color = Color.White)
+                        Text("●", fontSize = 14.sp, color = Color.White)
                     }
 
                     // RIGHT (3) - works in both modes
-                    WearButton(
+                    Button(
                         onClick = {
                             when (currentMode) {
                                 PopupMode.SCROLL -> onScrollAction("RIGHT", 1, 0)
@@ -306,7 +293,7 @@ fun ScrollPopupScreen(
                             else if (currentMode == PopupMode.SCROLL) Color(0xFF9C27B0) else MaterialTheme.colors.primary
                         )
                     ) {
-                        WearText(
+                        Text(
                             if (currentMode == PopupMode.SCROLL) "➡" else "→",
                             fontSize = 14.sp,
                             color = Color.White
@@ -320,7 +307,7 @@ fun ScrollPopupScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // DOWN-LEFT (5) - only works in DPAD mode
-                    WearButton(
+                    Button(
                         onClick = { if (currentMode == PopupMode.DPAD) onDpadAction("DOWN_LEFT", 5) },
                         modifier = Modifier.size(36.dp),
                         enabled = isConnected && currentMode == PopupMode.DPAD,
@@ -330,11 +317,11 @@ fun ScrollPopupScreen(
                             else MaterialTheme.colors.primary
                         )
                     ) {
-                        WearText("↙", fontSize = 12.sp, color = Color.White)
+                        Text("↙", fontSize = 12.sp, color = Color.White)
                     }
 
                     // DOWN (1) - works in both modes
-                    WearButton(
+                    Button(
                         onClick = {
                             when (currentMode) {
                                 PopupMode.SCROLL -> onScrollAction("DOWN", 0, 1)
@@ -348,7 +335,7 @@ fun ScrollPopupScreen(
                             else if (currentMode == PopupMode.SCROLL) Color(0xFF9C27B0) else MaterialTheme.colors.primary
                         )
                     ) {
-                        WearText(
+                        Text(
                             if (currentMode == PopupMode.SCROLL) "⬇" else "↓",
                             fontSize = 14.sp,
                             color = Color.White
@@ -356,7 +343,7 @@ fun ScrollPopupScreen(
                     }
 
                     // DOWN-RIGHT (6) - only works in DPAD mode
-                    WearButton(
+                    Button(
                         onClick = { if (currentMode == PopupMode.DPAD) onDpadAction("DOWN_RIGHT", 6) },
                         modifier = Modifier.size(36.dp),
                         enabled = isConnected && currentMode == PopupMode.DPAD,
@@ -366,7 +353,7 @@ fun ScrollPopupScreen(
                             else MaterialTheme.colors.primary
                         )
                     ) {
-                        WearText("↘", fontSize = 12.sp, color = Color.White)
+                        Text("↘", fontSize = 12.sp, color = Color.White)
                     }
                 }
             }
@@ -379,41 +366,38 @@ fun ScrollPopupScreen(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                WearText(
+                Text(
                     text = "Sens:",
                     style = MaterialTheme.typography.caption1,
                     fontSize = 10.sp,
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
                 )
 
-                OutlinedTextField(
-                    value = sensitivityText,
-                    onValueChange = { newValue: String ->
-                        // Allow digits and one decimal point
-                        if (newValue.matches(Regex("^\\d*\\.?\\d*$")) && newValue.length <= 5) {
-                            sensitivityText = newValue
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    keyboardActions = KeyboardActions(
-                        onDone = { updateSensitivity(sensitivityText) }
-                    ),
+                // Use Wear Compose Card instead of Material 3 TextField
+                Card(
+                    onClick = { updateSensitivity(sensitivityText) },
                     modifier = Modifier
                         .weight(1f)
                         .height(28.dp),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 10.sp),
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color(0xFF9C27B0),
-                        unfocusedIndicatorColor = Color.Gray
+                    backgroundPainter = CardDefaults.cardBackgroundPainter(
+                        startBackgroundColor = MaterialTheme.colors.surface,
+                        endBackgroundColor = MaterialTheme.colors.surface
                     )
-                )
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Text(
+                            text = sensitivityText,
+                            style = MaterialTheme.typography.caption1,
+                            fontSize = 10.sp,
+                            color = Color.White
+                        )
+                    }
+                }
 
-                WearText(
+                Text(
                     text = "%",
                     style = MaterialTheme.typography.caption1,
                     fontSize = 10.sp,
@@ -427,7 +411,7 @@ fun ScrollPopupScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 // Mode Toggle button
-                WearButton(
+                Button(
                     onClick = {
                         currentMode = if (currentMode == PopupMode.SCROLL) PopupMode.DPAD else PopupMode.SCROLL
                     },
@@ -436,7 +420,7 @@ fun ScrollPopupScreen(
                         backgroundColor = MaterialTheme.colors.secondary
                     )
                 ) {
-                    WearText(
+                    Text(
                         text = if (currentMode == PopupMode.SCROLL) "D-Pad" else "Scroll",
                         style = MaterialTheme.typography.caption1,
                         fontSize = 10.sp
@@ -444,14 +428,14 @@ fun ScrollPopupScreen(
                 }
 
                 // Back button
-                WearButton(
+                Button(
                     onClick = onBack,
                     modifier = Modifier.weight(1f).height(32.dp),
                     colors = ButtonDefaults.buttonColors(
                         backgroundColor = MaterialTheme.colors.surface
                     )
                 ) {
-                    WearText(
+                    Text(
                         text = "Back",
                         style = MaterialTheme.typography.caption1,
                         fontSize = 10.sp

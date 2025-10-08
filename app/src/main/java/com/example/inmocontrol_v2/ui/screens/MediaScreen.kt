@@ -32,10 +32,11 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun MediaScreen(
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onScrollPopup: () -> Unit = {}
 ) {
     LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.GenericHid
+        HidClient.currentDeviceProfile = DeviceProfile.Generic
     }
 
     // State management
@@ -91,13 +92,6 @@ fun MediaScreen(
             pressedButton = "VOLUME_DOWN"
             currentVolume = (currentVolume - 5).coerceAtLeast(0)
             HidClient.volumeDown()
-        }
-    }
-
-    fun handleOutputSwitch() {
-        if (isConnected) {
-            pressedButton = "OUTPUT_SWITCH"
-            HidClient.switchOutput()
         }
     }
 
@@ -251,22 +245,21 @@ fun MediaScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 6.dp)
                 ) {
-                    // Device output switch - moved here and made more prominent
-                    MediaButton(
-                        icon = Icons.Default.Bluetooth,
-                        onClick = { handleOutputSwitch() },
-                        enabled = isConnected,
-                        isPressed = pressedButton == "OUTPUT_SWITCH",
-                        size = 36.dp,
-                        backgroundColor = if (pressedButton == "OUTPUT_SWITCH") MaterialTheme.colors.secondary else MaterialTheme.colors.surface
-                    )
-
                     // Back button
                     MediaButton(
                         icon = Icons.AutoMirrored.Filled.ArrowBack,
                         onClick = onBack,
                         enabled = true,
                         isPressed = pressedButton == "BACK",
+                        size = 36.dp
+                    )
+
+                    // Scroll popup button
+                    MediaButton(
+                        icon = Icons.Default.Keyboard,
+                        onClick = onScrollPopup,
+                        enabled = true,
+                        isPressed = pressedButton == "SCROLL",
                         size = 36.dp
                     )
                 }

@@ -28,6 +28,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val sensitivity by settingsStore.sensitivity.collectAsState(initial = 0.5f)
     val remoteBackDoubleClick by settingsStore.remoteBackDoubleClick.collectAsState(initial = false)
+    val realtimeKeyboard by settingsStore.realtimeKeyboard.collectAsState(initial = false)
     val scrollSensitivity by settingsStore.scrollSensitivity.collectAsState(initial = 1.0f)
 
     Scaffold(
@@ -186,6 +187,29 @@ fun SettingsScreen(
                     toggleControl = {
                         Switch(
                             checked = remoteBackDoubleClick,
+                            onCheckedChange = null
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Realtime Keyboard Toggle
+            item {
+                ToggleChip(
+                    checked = realtimeKeyboard,
+                    onCheckedChange = {
+                        scope.launch { settingsStore.setRealtimeKeyboard(it) }
+                    },
+                    label = {
+                        WearText(
+                            text = "Realtime Keyboard",
+                            textAlign = TextAlign.Center
+                        )
+                    },
+                    toggleControl = {
+                        Switch(
+                            checked = realtimeKeyboard,
                             onCheckedChange = null
                         )
                     },

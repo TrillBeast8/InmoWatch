@@ -11,39 +11,53 @@ import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import androidx.core.content.ContextCompat
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.Scaffold
 import com.example.inmocontrol_v2.ui.screens.*
 import com.example.inmocontrol_v2.ui.theme.InmoTheme
-import androidx.core.app.ActivityCompat
 import com.example.inmocontrol_v2.hid.HidService
 import com.example.inmocontrol_v2.hid.HidClient
 import com.example.inmocontrol_v2.data.SettingsStore
-import kotlinx.coroutines.delay
 
 /**
- * Clean MainActivity following simplified pattern
+ * Optimized MainActivity with modern permission handling and performance improvements
  */
 class MainActivity : ComponentActivity() {
-    private val doubleClickThreshold = 400L
+    companion object {
+        private const val DOUBLE_CLICK_THRESHOLD = 400L
+    }
 
-    // Service connection
+    // Modern permission launcher
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (allGranted) {
+            startAndBindHidService()
+        }
+    }
+
+    // Service connection management
     private var hidServiceBound = false
     private val hidServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             try {
-                val service = (binder as HidService.LocalBinder).getService()
+                val service = (binder as? HidService.LocalBinder)?.getService()
                 HidClient.setService(service)
                 hidServiceBound = true
             } catch (_: Exception) {
-                // Handle silently
+                hidServiceBound = false
             }
         }
 
@@ -56,21 +70,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize HidClient
-        HidClient.initialize(this)
-
-        // Request permissions and bind service
-        if (hasAllRequiredPermissions()) {
-            bindHidService()
-        } else {
-            requestPermissions()
-        }
+        // Request permissions and start service
+        requestBluetoothPermissions()
 
         setContent {
             InmoTheme {
-                Surface(
+                Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
                 ) {
                     AppNavigation()
                 }
@@ -78,221 +84,168 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun hasAllRequiredPermissions(): Boolean {
-        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            listOf(
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.BLUETOOTH_ADVERTISE,
-                Manifest.permission.BLUETOOTH_SCAN
-            )
-        } else {
-            listOf(
-                Manifest.permission.BLUETOOTH,
-                Manifest.permission.BLUETOOTH_ADMIN,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        }
-
-        return permissions.all { permission ->
-            ActivityCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
-    private fun requestPermissions() {
-        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            arrayOf(
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.BLUETOOTH_ADVERTISE,
-                Manifest.permission.BLUETOOTH_SCAN
-            )
-        } else {
-            arrayOf(
-                Manifest.permission.BLUETOOTH,
-                Manifest.permission.BLUETOOTH_ADMIN,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        }
-
-        ActivityCompat.requestPermissions(this, permissions, 1001)
-    }
-
-    private fun bindHidService() {
-        try {
-            val intent = Intent(this, HidService::class.java)
-            startService(intent)
-            bindService(intent, hidServiceConnection, BIND_AUTO_CREATE) // Removed redundant qualifier
-        } catch (_: Exception) {
-            // Handle silently
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-
-        if (!hidServiceBound) {
-            bindHidService()
-        }
-
-        HidClient.refreshConnectionState()
+    override fun onStart() {
+        super.onStart()
+        bindHidServiceIfNeeded()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        cleanup()
+        unbindHidService()
     }
 
-    private fun cleanup() {
-        try {
-            if (hidServiceBound) {
-                unbindService(hidServiceConnection)
-                hidServiceBound = false
+    private fun requestBluetoothPermissions() {
+        val permissionsToRequest = mutableListOf<String>()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
             }
-        } catch (_: Exception) {
-            // Handle silently
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            }
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            permissionLauncher.launch(permissionsToRequest.toTypedArray())
+        } else {
+            startAndBindHidService()
         }
     }
 
-    @Suppress("DEPRECATION")
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    private fun startAndBindHidService() {
+        val serviceIntent = Intent(this, HidService::class.java)
+        startForegroundService(serviceIntent)
+        bindHidServiceIfNeeded()
+    }
 
-        if (requestCode == 1001) {
-            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                bindHidService()
+    private fun bindHidServiceIfNeeded() {
+        if (!hidServiceBound) {
+            val serviceIntent = Intent(this, HidService::class.java)
+            bindService(serviceIntent, hidServiceConnection, BIND_AUTO_CREATE)
+        }
+    }
+
+    private fun unbindHidService() {
+        if (hidServiceBound) {
+            try {
+                unbindService(hidServiceConnection)
+            } catch (_: Exception) {
+                // Service may already be unbound
             }
+            hidServiceBound = false
         }
     }
 
     @Composable
     private fun AppNavigation() {
-        val context = LocalContext.current
         val navController = rememberNavController()
+        val context = LocalContext.current
         val settingsStore = remember { SettingsStore.get(context) }
 
-        // Get back button remap setting
+        // Optimized back button handling
+        var lastBackPressTime by remember { mutableLongStateOf(0L) }
         val remoteBackDoubleClick by settingsStore.remoteBackDoubleClick.collectAsState(initial = false)
 
-        // Back button handler state
-        var lastBackPressTime by remember { mutableStateOf(0L) }
-        var pendingBackAction by remember { mutableStateOf(false) }
-
-        // Handle pending single back press
-        LaunchedEffect(pendingBackAction, lastBackPressTime) {
-            if (pendingBackAction) {
-                delay(doubleClickThreshold)
-                if (pendingBackAction) { // Still pending, execute single press action
-                    pendingBackAction = false
-                    if (remoteBackDoubleClick && HidClient.isConnected.value) {
-                        // Send ESC/back to connected device
-                        HidClient.sendKey(27) // ESC key
-                    } else {
-                        // Normal back navigation
-                        if (navController.previousBackStackEntry != null) {
-                            navController.popBackStack()
-                        }
-                    }
-                }
-            }
-        }
-
-        // Custom back handler for remap functionality
-        BackHandler(enabled = true) {
+        BackHandler {
             val currentTime = System.currentTimeMillis()
-
-            if (remoteBackDoubleClick) {
-                // Back remap is enabled
-                if (currentTime - lastBackPressTime < doubleClickThreshold) {
-                    // Double press - navigate to previous screen in watch app
-                    pendingBackAction = false // Cancel pending single press
-                    lastBackPressTime = 0L
-                    if (navController.previousBackStackEntry != null) {
-                        navController.popBackStack()
-                    }
-                } else {
-                    // First press - set up for potential single press (send to device)
-                    lastBackPressTime = currentTime
-                    pendingBackAction = true
-                }
+            if (remoteBackDoubleClick && (currentTime - lastBackPressTime) < DOUBLE_CLICK_THRESHOLD) {
+                finish()
             } else {
-                // Back remap is disabled - normal behavior
+                lastBackPressTime = currentTime
                 if (navController.previousBackStackEntry != null) {
                     navController.popBackStack()
+                } else if (!remoteBackDoubleClick) {
+                    finish()
                 }
             }
         }
 
         NavHost(
             navController = navController,
-            startDestination = "connect_device"
+            startDestination = "main"
         ) {
-            composable("connect_device") {
-                ConnectToDeviceScreen(
-                    onDeviceConnected = {
-                        navController.navigate("main") {
-                            popUpTo("connect_device") { inclusive = true }
-                        }
-                    }
+            // Main menu
+            composable("main") {
+                MainMenuScreen(
+                    onNavigateToConnect = { navController.navigate("connect") },
+                    onNavigateToMouse = { navController.navigate("mouse") },
+                    onNavigateToTouchpad = { navController.navigate("touchpad") },
+                    onNavigateToKeyboard = { navController.navigate("keyboard") },
+                    onNavigateToMedia = { navController.navigate("media") },
+                    onNavigateToSettings = { navController.navigate("settings") },
+                    onNavigateToDpad = { navController.navigate("dpad") }
                 )
             }
 
-            composable("main") {
-                MainMenuScreen(
-                    onNavigateToConnect = {
-                        navController.navigate("connect_device") {
-                            popUpTo("main") { inclusive = true }
-                        }
-                    },
-                    onNavigateToTouchpad = {
-                        navController.navigate("touchpad")
-                    },
-                    onNavigateToDpad = {
-                        navController.navigate("dpad")
-                    },
-                    onNavigateToMouse = {
-                        navController.navigate("mouse")
-                    },
-                    onNavigateToKeyboard = {
-                        navController.navigate("keyboard")
-                    },
-                    onNavigateToMedia = {
-                        navController.navigate("media")
-                    },
-                    onNavigateToSettings = {
-                        navController.navigate("settings")
-                    }
+            // Input modes - optimized navigation
+            composable("keyboard") {
+                KeyboardScreen(
+                    onBack = { navController.popBackStack() },
+                    onScrollPopup = { navController.navigate("scrollPopup/keyboard") }
                 )
             }
 
             composable("touchpad") {
                 TouchpadScreen(
-                    mode = "touchpad"
+                    onBack = { navController.popBackStack() },
+                    onScrollPopup = { navController.navigate("scrollPopup/touchpad") }
+                )
+            }
+
+            composable("mouse") {
+                MouseScreen(
+                    onBack = { navController.popBackStack() },
+                    onScrollPopup = { navController.navigate("scrollPopup/mouse") }
                 )
             }
 
             composable("dpad") {
-                DpadScreen()
-            }
-
-            composable("mouse") {
-                TouchpadScreen(
-                    mode = "mouse"
+                DpadScreen(
+                    onBack = { navController.popBackStack() },
+                    onScrollPopup = { navController.navigate("scrollPopup/dpad") }
                 )
             }
 
-            composable("keyboard") {
-                KeyboardScreen()
-            }
-
             composable("media") {
-                MediaScreen()
+                MediaScreen(
+                    onBack = { navController.popBackStack() },
+                    onScrollPopup = { navController.navigate("scrollPopup/media") }
+                )
             }
 
+            // Settings and configuration
             composable("settings") {
-                SettingsScreen()
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToMouseCalibration = { navController.navigate("mouseCalibration") }
+                )
+            }
+
+            composable("connect") {
+                ConnectToDeviceScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("mouseCalibration") {
+                MouseCalibrationScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // Scroll popup with parent parameter
+            composable(
+                "scrollPopup/{parent}",
+                arguments = listOf(navArgument("parent") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val parent = backStackEntry.arguments?.getString("parent") ?: "main"
+                ScrollPopupScreen(
+                    parentScreen = parent,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

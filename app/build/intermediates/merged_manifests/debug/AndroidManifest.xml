@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.inmocontrol_v2"
+    package="com.example.inmocontrol_v2.debug"
     android:versionCode="1"
     android:versionName="1.0" >
 
     <uses-sdk
-        android:minSdkVersion="28"
+        android:minSdkVersion="30"
         android:targetSdkVersion="34" />
 
     <uses-feature android:name="android.hardware.type.watch" />
@@ -53,10 +53,10 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <permission
-        android:name="com.example.inmocontrol_v2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:name="com.example.inmocontrol_v2.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="com.example.inmocontrol_v2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+    <uses-permission android:name="com.example.inmocontrol_v2.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <queries>
         <intent>
@@ -65,13 +65,16 @@
     </queries>
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:debuggable="true"
         android:extractNativeLibs="false"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:networkSecurityConfig="@xml/network_security_config"
+        android:testOnly="true"
         android:theme="@android:style/Theme.DeviceDefault" >
         <uses-library
             android:name="com.google.android.wearable"
@@ -85,6 +88,7 @@
             android:name="com.example.inmocontrol_v2.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:theme="@android:style/Theme.DeviceDefault" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -98,15 +102,18 @@
             android:name="com.example.inmocontrol_v2.hid.HidService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="connectedDevice"
+            android:stopWithTask="false" />
 
         <!-- Boot receiver to start service on device boot -->
         <receiver
             android:name="com.example.inmocontrol_v2.boot.BootReceiver"
+            android:directBootAware="true"
             android:enabled="true"
             android:exported="true" >
             <intent-filter android:priority="1000" >
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.PACKAGE_REPLACED" />
 
@@ -126,12 +133,19 @@
 
             <meta-data
                 android:name="androidx.wear.tiles.PREVIEW"
-                android:resource="@mipmap/ic_launcher" />
+                android:resource="@drawable/tile_preview" />
         </service>
+
+        <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:exported="true" />
+        <activity
+            android:name="androidx.compose.ui.tooling.PreviewActivity"
+            android:exported="true" />
 
         <provider
             android:name="androidx.startup.InitializationProvider"
-            android:authorities="com.example.inmocontrol_v2.androidx-startup"
+            android:authorities="com.example.inmocontrol_v2.debug.androidx-startup"
             android:exported="false" >
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"
@@ -143,10 +157,6 @@
                 android:name="androidx.profileinstaller.ProfileInstallerInitializer"
                 android:value="androidx.startup" />
         </provider>
-
-        <activity
-            android:name="androidx.compose.ui.tooling.PreviewActivity"
-            android:exported="true" />
 
         <receiver
             android:name="androidx.profileinstaller.ProfileInstallReceiver"
@@ -167,6 +177,10 @@
                 <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
             </intent-filter>
         </receiver>
+
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
     </application>
 
 </manifest>

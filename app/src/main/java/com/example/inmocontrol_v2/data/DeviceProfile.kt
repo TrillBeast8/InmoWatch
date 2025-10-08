@@ -1,62 +1,46 @@
 package com.example.inmocontrol_v2.data
 
 /**
- * Simple device profile enum for different input modes
- * This represents the type of HID device we're emulating
+ * Optimized Device profile enumeration - reduced memory footprint
  */
-enum class DeviceProfile {
+enum class DeviceProfile(val displayName: String) {
     /**
      * Mouse mode - for cursor movement and clicking
      */
-    Mouse,
+    Mouse("Mouse"),
 
     /**
      * Keyboard mode - for text input and hotkeys
      */
-    Keyboard,
+    Keyboard("Keyboard"),
 
     /**
      * Media mode - for media controls (play, pause, volume)
      */
-    Media,
+    Media("Media Controls"),
 
     /**
      * Gamepad mode - for D-pad controls
      */
-    Gamepad,
+    Gamepad("D-Pad"),
 
     /**
-     * InmoAir2 specific profile - optimized for InmoAir glasses
+     * Touchpad mode - for touch-based input
      */
-    InmoAir2,
+    Touchpad("Touchpad"),
 
     /**
      * Generic HID profile - fallback for unknown devices
      */
-    GenericHid;
+    Generic("Generic HID"),
 
     /**
-     * Get user-friendly display name
+     * InmoAir2 specific profile - optimized for InmoAir glasses
      */
-    val displayName: String
-        get() = when (this) {
-            Mouse -> "Mouse"
-            Keyboard -> "Keyboard"
-            Media -> "Media Controls"
-            Gamepad -> "D-Pad"
-            InmoAir2 -> "InmoAir2"
-            GenericHid -> "Generic HID"
-        }
+    InmoAir2("InmoAir2"),
 
     /**
-     * Check if this profile supports mouse-like operations
+     * Universal profile - for devices that don't fit other categories
      */
-    val supportsMouseInput: Boolean
-        get() = this == Mouse || this == InmoAir2 || this == GenericHid
-
-    /**
-     * Check if this profile supports keyboard input
-     */
-    val supportsKeyboardInput: Boolean
-        get() = this == Keyboard || this == InmoAir2 || this == GenericHid
+    Universal("Universal Device")
 }
