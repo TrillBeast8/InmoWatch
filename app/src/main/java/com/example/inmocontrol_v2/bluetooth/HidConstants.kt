@@ -1,138 +1,116 @@
 package com.example.inmocontrol_v2.bluetooth
 
-import android.bluetooth.BluetoothHidDevice
-import android.bluetooth.BluetoothHidDeviceAppQosSettings
-import android.bluetooth.BluetoothHidDeviceAppSdpSettings
-
 /**
- * HID Constants matching proven WearMouse implementation for reliable connectivity
- * Using exact same Report IDs and descriptor structure as wearmouse reference
+ * HID constants and report descriptors for universal Bluetooth HID compatibility.
+ * Based on standard WearMouse descriptor for broad host support.
  */
 object HidConstants {
 
-    // Report IDs - EXACT match with wearmouse for compatibility
-    const val ID_KEYBOARD: Byte = 1
-    const val ID_MOUSE: Byte = 2
-    const val ID_CONSUMER: Byte = 3  // Our addition for media controls
+    // Report IDs
+    const val ID_KEYBOARD: Byte = 0x01
+    const val ID_MOUSE: Byte = 0x02
+    const val ID_CONSUMER: Byte = 0x03
+
+    // Timing constants (milliseconds)
+    const val PRESS_RELEASE_DELAY_MS = 20L       // Delay between press and release reports
+    const val DEBOUNCE_DELAY_MS = 50L            // Minimum interval between repeated actions
+    const val KEY_REPEAT_DELAY_MS = 5L           // Delay between characters in text transmission
 
     // Mouse button masks
-    const val MOUSE_BUTTON_LEFT = 0x01
-    const val MOUSE_BUTTON_RIGHT = 0x02
-    const val MOUSE_BUTTON_MIDDLE = 0x04
+    const val MOUSE_BUTTON_LEFT: Byte = 0x01
+    const val MOUSE_BUTTON_RIGHT: Byte = 0x02
+    const val MOUSE_BUTTON_MIDDLE: Byte = 0x04
 
-    // Consumer Control Usage IDs for media functions
-    const val USAGE_PLAY_PAUSE = 0xCD     // Play/Pause
-    const val USAGE_NEXT_TRACK = 0xB5     // Next Track
-    const val USAGE_PREV_TRACK = 0xB6     // Previous Track
-    const val USAGE_VOLUME_UP = 0xE9      // Volume Up
-    const val USAGE_VOLUME_DOWN = 0xEA    // Volume Down
-    const val USAGE_MUTE = 0xE2           // Mute
+    // Keyboard modifier masks
+    const val MOD_LEFT_CTRL: Byte = 0x01
+    const val MOD_LEFT_SHIFT: Byte = 0x02
+    const val MOD_LEFT_ALT: Byte = 0x04
+    const val MOD_LEFT_WIN: Byte = 0x08
+    const val MOD_RIGHT_CTRL: Byte = 0x10
+    const val MOD_RIGHT_SHIFT: Byte = 0x20
+    const val MOD_RIGHT_ALT: Byte = 0x40
+    const val MOD_RIGHT_WIN: Byte = 0x80.toByte()
 
-    /**
-     * HID Descriptor based on proven WearMouse pattern with our media controls addition
-     * This ensures maximum compatibility with HID hosts
-     */
-    private val HIDD_REPORT_DESC = byteArrayOf(
-        // Keyboard (ID=1) - Exact wearmouse structure
-        0x05.toByte(), 0x01, // Usage page (Generic Desktop)
-        0x09.toByte(), 0x06, // Usage (Keyboard)
-        0xA1.toByte(), 0x01, // Collection (Application)
-        0x85.toByte(), ID_KEYBOARD, //    Report ID
-        0x05.toByte(), 0x07, //       Usage page (Key Codes)
-        0x19.toByte(), 0xE0.toByte(), //       Usage minimum (224)
-        0x29.toByte(), 0xE7.toByte(), //       Usage maximum (231)
-        0x15.toByte(), 0x00, //       Logical minimum (0)
-        0x25.toByte(), 0x01, //       Logical maximum (1)
-        0x75.toByte(), 0x01, //       Report size (1)
-        0x95.toByte(), 0x08, //       Report count (8)
-        0x81.toByte(), 0x02, //       Input (Data, Variable, Absolute) ; Modifier byte
-        0x75.toByte(), 0x08, //       Report size (8)
-        0x95.toByte(), 0x01, //       Report count (1)
-        0x81.toByte(), 0x01, //       Input (Constant)                 ; Reserved byte
-        0x75.toByte(), 0x08, //       Report size (8)
-        0x95.toByte(), 0x06, //       Report count (6)
-        0x15.toByte(), 0x00, //       Logical Minimum (0)
-        0x25.toByte(), 0x65, //       Logical Maximum (101)
-        0x05.toByte(), 0x07, //       Usage page (Key Codes)
-        0x19.toByte(), 0x00, //       Usage Minimum (0)
-        0x29.toByte(), 0x65, //       Usage Maximum (101)
-        0x81.toByte(), 0x00, //       Input (Data, Array)              ; Key array (6 keys)
-        0xC0.toByte(),              // End Collection
+    // HID Usage codes for Consumer Control (Media)
+    const val USAGE_PLAY_PAUSE: Short = 0x00CD.toShort()
+    const val USAGE_NEXT_TRACK: Short = 0x00B5.toShort()
+    const val USAGE_PREV_TRACK: Short = 0x00B6.toShort()
+    const val USAGE_VOLUME_UP: Short = 0x00E9.toShort()
+    const val USAGE_VOLUME_DOWN: Short = 0x00EA.toShort()
+    const val USAGE_MUTE: Short = 0x00E2.toShort()
 
-        // Mouse (ID=2) - Exact wearmouse structure
-        0x05.toByte(), 0x01, // Usage Page (Generic Desktop)
-        0x09.toByte(), 0x02, // Usage (Mouse)
-        0xA1.toByte(), 0x01, // Collection (Application)
-        0x85.toByte(), ID_MOUSE,    //    Report ID
-        0x09.toByte(), 0x01, //    Usage (Pointer)
-        0xA1.toByte(), 0x00, //    Collection (Physical)
-        0x05.toByte(), 0x09, //       Usage Page (Buttons)
-        0x19.toByte(), 0x01, //       Usage minimum (1)
-        0x29.toByte(), 0x03, //       Usage maximum (3)
-        0x15.toByte(), 0x00, //       Logical minimum (0)
-        0x25.toByte(), 0x01, //       Logical maximum (1)
-        0x75.toByte(), 0x01, //       Report size (1)
-        0x95.toByte(), 0x03, //       Report count (3)
-        0x81.toByte(), 0x02, //       Input (Data, Variable, Absolute)
-        0x75.toByte(), 0x05, //       Report size (5)
-        0x95.toByte(), 0x01, //       Report count (1)
-        0x81.toByte(), 0x01, //       Input (constant)                 ; 5 bit padding
-        0x05.toByte(), 0x01, //       Usage page (Generic Desktop)
-        0x09.toByte(), 0x30, //       Usage (X)
-        0x09.toByte(), 0x31, //       Usage (Y)
-        0x09.toByte(), 0x38, //       Usage (Wheel)
-        0x15.toByte(), 0x81.toByte(), //       Logical minimum (-127)
-        0x25.toByte(), 0x7F, //       Logical maximum (127)
-        0x75.toByte(), 0x08, //       Report size (8)
-        0x95.toByte(), 0x03, //       Report count (3)
-        0x81.toByte(), 0x06, //       Input (Data, Variable, Relative)
-        0xC0.toByte(),              //    End Collection
-        0xC0.toByte(),              // End Collection
+    // Standard HID Report Descriptor (Boot Protocol Compatible)
+    // Matches WearMouse specification for universal compatibility
+    val REPORT_DESCRIPTOR = byteArrayOf(
+        // Keyboard Report (Report ID 1)
+        0x05.toByte(), 0x01.toByte(),        // Usage Page (Generic Desktop)
+        0x09.toByte(), 0x06.toByte(),        // Usage (Keyboard)
+        0xA1.toByte(), 0x01.toByte(),        // Collection (Application)
+        0x85.toByte(), ID_KEYBOARD,          //   Report ID (1)
+        0x05.toByte(), 0x07.toByte(),        //   Usage Page (Key Codes)
+        0x19.toByte(), 0xE0.toByte(),        //   Usage Minimum (224)
+        0x29.toByte(), 0xE7.toByte(),        //   Usage Maximum (231)
+        0x15.toByte(), 0x00.toByte(),        //   Logical Minimum (0)
+        0x25.toByte(), 0x01.toByte(),        //   Logical Maximum (1)
+        0x75.toByte(), 0x01.toByte(),        //   Report Size (1)
+        0x95.toByte(), 0x08.toByte(),        //   Report Count (8)
+        0x81.toByte(), 0x02.toByte(),        //   Input (Data, Variable, Absolute) - Modifier byte
+        0x95.toByte(), 0x01.toByte(),        //   Report Count (1)
+        0x75.toByte(), 0x08.toByte(),        //   Report Size (8)
+        0x81.toByte(), 0x01.toByte(),        //   Input (Constant) - Reserved byte
+        0x95.toByte(), 0x06.toByte(),        //   Report Count (6)
+        0x75.toByte(), 0x08.toByte(),        //   Report Size (8)
+        0x15.toByte(), 0x00.toByte(),        //   Logical Minimum (0)
+        0x25.toByte(), 0x65.toByte(),        //   Logical Maximum (101)
+        0x05.toByte(), 0x07.toByte(),        //   Usage Page (Key Codes)
+        0x19.toByte(), 0x00.toByte(),        //   Usage Minimum (0)
+        0x29.toByte(), 0x65.toByte(),        //   Usage Maximum (101)
+        0x81.toByte(), 0x00.toByte(),        //   Input (Data, Array) - Key array
+        0xC0.toByte(),                       // End Collection
 
-        // Consumer Control (ID=3) - Our addition for media controls
-        0x05.toByte(), 0x0C, // Usage page (Consumer)
-        0x09.toByte(), 0x01, // Usage (Consumer Control)
-        0xA1.toByte(), 0x01, // Collection (Application)
-        0x85.toByte(), ID_CONSUMER, //    Report ID
-        0x19.toByte(), 0x00, //    Usage Minimum
-        0x2A.toByte(), 0x3C.toByte(), 0x02, // Usage Maximum (0x23C)
-        0x15.toByte(), 0x00, //    Logical Minimum (0)
-        0x26.toByte(), 0x3C.toByte(), 0x02, // Logical Maximum (0x23C)
-        0x95.toByte(), 0x01, //    Report Count (1)
-        0x75.toByte(), 0x10, //    Report Size (16)
-        0x81.toByte(), 0x00, //    Input (Data,Array,Abs)
-        0xC0.toByte()              // End Collection
+        // Mouse Report (Report ID 2)
+        0x05.toByte(), 0x01.toByte(),        // Usage Page (Generic Desktop)
+        0x09.toByte(), 0x02.toByte(),        // Usage (Mouse)
+        0xA1.toByte(), 0x01.toByte(),        // Collection (Application)
+        0x85.toByte(), ID_MOUSE,             //   Report ID (2)
+        0x09.toByte(), 0x01.toByte(),        //   Usage (Pointer)
+        0xA1.toByte(), 0x00.toByte(),        //   Collection (Physical)
+        0x05.toByte(), 0x09.toByte(),        //     Usage Page (Buttons)
+        0x19.toByte(), 0x01.toByte(),        //     Usage Minimum (1)
+        0x29.toByte(), 0x03.toByte(),        //     Usage Maximum (3)
+        0x15.toByte(), 0x00.toByte(),        //     Logical Minimum (0)
+        0x25.toByte(), 0x01.toByte(),        //     Logical Maximum (1)
+        0x95.toByte(), 0x03.toByte(),        //     Report Count (3)
+        0x75.toByte(), 0x01.toByte(),        //     Report Size (1)
+        0x81.toByte(), 0x02.toByte(),        //     Input (Data, Variable, Absolute) - Buttons
+        0x95.toByte(), 0x01.toByte(),        //     Report Count (1)
+        0x75.toByte(), 0x05.toByte(),        //     Report Size (5)
+        0x81.toByte(), 0x01.toByte(),        //     Input (Constant) - Padding
+        0x05.toByte(), 0x01.toByte(),        //     Usage Page (Generic Desktop)
+        0x09.toByte(), 0x30.toByte(),        //     Usage (X)
+        0x09.toByte(), 0x31.toByte(),        //     Usage (Y)
+        0x09.toByte(), 0x38.toByte(),        //     Usage (Wheel)
+        0x15.toByte(), 0x81.toByte(),        //     Logical Minimum (-127)
+        0x25.toByte(), 0x7F.toByte(),        //     Logical Maximum (127)
+        0x75.toByte(), 0x08.toByte(),        //     Report Size (8)
+        0x95.toByte(), 0x03.toByte(),        //     Report Count (3)
+        0x81.toByte(), 0x06.toByte(),        //     Input (Data, Variable, Relative) - X, Y, Wheel
+        0xC0.toByte(),                       //   End Collection (Physical)
+        0xC0.toByte(),                       // End Collection (Application)
+
+        // Consumer Control Report (Report ID 3)
+        0x05.toByte(), 0x0C.toByte(),        // Usage Page (Consumer)
+        0x09.toByte(), 0x01.toByte(),        // Usage (Consumer Control)
+        0xA1.toByte(), 0x01.toByte(),        // Collection (Application)
+        0x85.toByte(), ID_CONSUMER,          //   Report ID (3)
+        0x19.toByte(), 0x00.toByte(),        //   Usage Minimum (0)
+        0x2A.toByte(), 0x3C.toByte(), 0x02.toByte(), // Usage Maximum (572)
+        0x15.toByte(), 0x00.toByte(),        //   Logical Minimum (0)
+        0x26.toByte(), 0x3C.toByte(), 0x02.toByte(), // Logical Maximum (572)
+        0x95.toByte(), 0x01.toByte(),        //   Report Count (1)
+        0x75.toByte(), 0x10.toByte(),        //   Report Size (16)
+        0x81.toByte(), 0x00.toByte(),        //   Input (Data, Array)
+        0xC0.toByte()                        // End Collection
     )
-
-    // Public accessor for other code (GattHidServer) that needs the raw descriptor bytes
-    val REPORT_DESCRIPTOR: ByteArray get() = HIDD_REPORT_DESC
-
-    /**
-     * SDP Settings for HID Device registration - based on proven WearMouse configuration
-     * These settings are critical for successful HID registration
-     */
-    val SDP_SETTINGS: BluetoothHidDeviceAppSdpSettings by lazy {
-        BluetoothHidDeviceAppSdpSettings(
-            "InmoWatch Remote",        // Device name
-            "InmoWatch HID Remote Control", // Device description
-            "InmoLabs",               // Provider name
-            BluetoothHidDevice.SUBCLASS1_COMBO,  // Device subclass (combo device)
-            HIDD_REPORT_DESC          // HID descriptor
-        )
-    }
-
-    /**
-     * QoS Settings for outgoing data - optimized for responsive input
-     * Based on WearMouse proven configuration for minimal latency
-     */
-    val QOS_OUT: BluetoothHidDeviceAppQosSettings by lazy {
-        BluetoothHidDeviceAppQosSettings(
-            BluetoothHidDeviceAppQosSettings.SERVICE_BEST_EFFORT,  // Service type
-            800,    // Token rate (bytes/second) - high for responsive input
-            9,      // Token bucket size - small for low latency
-            800,    // Peak bandwidth - match token rate
-            0,      // Latency (microseconds) - 0 for best effort
-            0xFFFFFF  // Delay variation - large value for best effort (24-bit max)
-        )
-    }
 }
+

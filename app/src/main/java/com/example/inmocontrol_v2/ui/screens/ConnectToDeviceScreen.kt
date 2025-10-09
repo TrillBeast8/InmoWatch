@@ -3,7 +3,6 @@ package com.example.inmocontrol_v2.ui.screens
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -23,7 +22,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material.*
-import com.example.inmocontrol_v2.hid.HidClient
 import com.example.inmocontrol_v2.data.BluetoothSettingsStore
 import kotlinx.coroutines.launch
 
@@ -104,7 +102,7 @@ fun ConnectToDeviceScreen(
                     item { ListHeader { Text("Discovered") } }
                     items(uiState.discoveredDevices) { device ->
                         DeviceChip(device = device) {
-                            viewModel.connectToDevice(device)
+                            viewModel.connect(device)
                             scope.launch {
                                 BluetoothSettingsStore.saveLastDevice(context, device)
                                 onBack()
@@ -118,7 +116,7 @@ fun ConnectToDeviceScreen(
                     item { ListHeader { Text("Paired") } }
                     items(uiState.pairedDevices) { device ->
                         DeviceChip(device = device) {
-                            viewModel.connectToDevice(device)
+                            viewModel.connect(device)
                             scope.launch {
                                 BluetoothSettingsStore.saveLastDevice(context, device)
                                 onBack()
@@ -170,7 +168,11 @@ private fun BluetoothDisabledState(context: Context) {
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
             val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            context.startActivity(intent)
+            try {
+                context.startActivity(intent)
+            } catch (_: SecurityException) {
+                // Permission may be denied at runtime; ignore and keep UI state
+            }
         }) {
             Text("Enable")
         }

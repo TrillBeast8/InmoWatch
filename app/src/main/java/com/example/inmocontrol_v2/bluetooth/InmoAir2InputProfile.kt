@@ -16,29 +16,40 @@ class InmoAir2InputProfile(private val hidInputManager: HidInputManager) : Input
         hidInputManager.sendMouseMovement(deltaX * MOUSE_SENSITIVITY, deltaY * MOUSE_SENSITIVITY)
 
     override fun sendScroll(deltaX: Float, deltaY: Float): Boolean =
-        hidInputManager.sendScroll(deltaX * SCROLL_SENSITIVITY, deltaY * SCROLL_SENSITIVITY)
+        hidInputManager.sendMouseScroll(deltaX * SCROLL_SENSITIVITY, deltaY * SCROLL_SENSITIVITY)
 
-    // Direct delegation for all other methods
-    override fun sendLeftClick(): Boolean = hidInputManager.sendLeftClick()
-    override fun sendRightClick(): Boolean = hidInputManager.sendRightClick()
-    override fun sendMiddleClick(): Boolean = hidInputManager.sendMiddleClick()
-    override fun sendDoubleClick(): Boolean = hidInputManager.sendDoubleClick()
+    override fun sendLeftClick(): Boolean =
+        hidInputManager.sendMouseClick(left = true, right = false, middle = false)
+
+    override fun sendRightClick(): Boolean =
+        hidInputManager.sendMouseClick(left = false, right = true, middle = false)
+
+    override fun sendMiddleClick(): Boolean =
+        hidInputManager.sendMouseClick(left = false, right = false, middle = true)
+
+    override fun sendDoubleClick(): Boolean {
+        val first = hidInputManager.sendMouseClick(left = true, right = false, middle = false)
+        if (!first) return false
+        Thread.sleep(50)
+        val second = hidInputManager.sendMouseClick(left = true, right = false, middle = false)
+        return first && second
+    }
 
     override fun sendKey(keyCode: Int, modifiers: Int): Boolean = hidInputManager.sendKey(keyCode, modifiers)
     override fun sendText(text: String): Boolean = hidInputManager.sendText(text)
 
-    override fun sendPlayPause(): Boolean = hidInputManager.sendPlayPause()
-    override fun sendNextTrack(): Boolean = hidInputManager.sendNextTrack()
-    override fun sendPreviousTrack(): Boolean = hidInputManager.sendPreviousTrack()
-    override fun sendVolumeUp(): Boolean = hidInputManager.sendVolumeUp()
-    override fun sendVolumeDown(): Boolean = hidInputManager.sendVolumeDown()
-    override fun sendMute(): Boolean = hidInputManager.sendMute()
+    override fun sendPlayPause(): Boolean = hidInputManager.playPause()
+    override fun sendNextTrack(): Boolean = hidInputManager.nextTrack()
+    override fun sendPreviousTrack(): Boolean = hidInputManager.previousTrack()
+    override fun sendVolumeUp(): Boolean = hidInputManager.volumeUp()
+    override fun sendVolumeDown(): Boolean = hidInputManager.volumeDown()
+    override fun sendMute(): Boolean = hidInputManager.mute()
 
-    override fun sendDpadUp(): Boolean = hidInputManager.sendDpadUp()
-    override fun sendDpadDown(): Boolean = hidInputManager.sendDpadDown()
-    override fun sendDpadLeft(): Boolean = hidInputManager.sendDpadLeft()
-    override fun sendDpadRight(): Boolean = hidInputManager.sendDpadRight()
-    override fun sendDpadCenter(): Boolean = hidInputManager.sendDpadCenter()
+    override fun sendDpadUp(): Boolean = hidInputManager.sendKey(0x52)
+    override fun sendDpadDown(): Boolean = hidInputManager.sendKey(0x51)
+    override fun sendDpadLeft(): Boolean = hidInputManager.sendKey(0x50)
+    override fun sendDpadRight(): Boolean = hidInputManager.sendKey(0x4F)
+    override fun sendDpadCenter(): Boolean = hidInputManager.sendKey(0x28)
 
     override fun sendHidReport(reportId: Int, data: ByteArray): Boolean =
         hidInputManager.sendHidReport(reportId, data)

@@ -1,13 +1,10 @@
 package com.example.inmocontrol_v2
 
 import android.Manifest
-import android.content.ComponentName
 import android.content.Intent
-import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
@@ -22,8 +19,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.core.content.ContextCompat
-import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Scaffold
+import com.example.inmocontrol_v2.nav.NavRoutes
 import com.example.inmocontrol_v2.ui.screens.*
 import com.example.inmocontrol_v2.ui.theme.InmoTheme
 import com.example.inmocontrol_v2.hid.HidService
@@ -48,25 +45,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Service connection management
-    private var hidServiceBound = false
-    private val hidServiceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            try {
-                val service = (binder as? HidService.LocalBinder)?.getService()
-                HidClient.setService(service)
-                hidServiceBound = true
-            } catch (_: Exception) {
-                hidServiceBound = false
-            }
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            HidClient.setService(null)
-            hidServiceBound = false
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -86,12 +64,24 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        bindHidServiceIfNeeded()
+        // Bind to HidClient if permissions are granted
+        if (hasBluetoothPermissions()) {
+            HidClient.bindService(this)
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        unbindHidService()
+        HidClient.unbindService(this)
+    }
+
+    private fun hasBluetoothPermissions(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
     }
 
     private fun requestBluetoothPermissions() {
@@ -118,25 +108,7 @@ class MainActivity : ComponentActivity() {
     private fun startAndBindHidService() {
         val serviceIntent = Intent(this, HidService::class.java)
         startForegroundService(serviceIntent)
-        bindHidServiceIfNeeded()
-    }
-
-    private fun bindHidServiceIfNeeded() {
-        if (!hidServiceBound) {
-            val serviceIntent = Intent(this, HidService::class.java)
-            bindService(serviceIntent, hidServiceConnection, BIND_AUTO_CREATE)
-        }
-    }
-
-    private fun unbindHidService() {
-        if (hidServiceBound) {
-            try {
-                unbindService(hidServiceConnection)
-            } catch (_: Exception) {
-                // Service may already be unbound
-            }
-            hidServiceBound = false
-        }
+        HidClient.bindService(this)
     }
 
     @Composable
@@ -149,101 +121,130 @@ class MainActivity : ComponentActivity() {
         var lastBackPressTime by remember { mutableLongStateOf(0L) }
         val remoteBackDoubleClick by settingsStore.remoteBackDoubleClick.collectAsState(initial = false)
 
-        BackHandler {
+        val screens = listOf(
+            NavRoutes.Mouse,
+            NavRoutes.Touchpad,
+            NavRoutes.Keyboard,
+            NavRoutes.Media,
+            NavRoutes.DPad,
+            NavRoutes.Settings
+        )
+
+        val navigateLeft: (String) -> Unit = { currentRoute ->
+            val currentIndex = screens.indexOf(currentRoute)
+            val nextIndex = if (currentIndex > 0) currentIndex - 1 else screens.size - 1
+            navController.navigate(screens[nextIndex]) {
+                popUpTo(NavRoutes.MainMenu)
+            }
+        }
+
+        val navigateRight: (String) -> Unit = { currentRoute ->
+            val currentIndex = screens.indexOf(currentRoute)
+            val nextIndex = (currentIndex + 1) % screens.size
+            navController.navigate(screens[nextIndex]) {
+                popUpTo(NavRoutes.MainMenu)
+            }
+        }
+
+        BackHandler(enabled = true) {
             val currentTime = System.currentTimeMillis()
-            if (remoteBackDoubleClick && (currentTime - lastBackPressTime) < DOUBLE_CLICK_THRESHOLD) {
-                finish()
+            if (remoteBackDoubleClick) {
+                if (currentTime - lastBackPressTime < DOUBLE_CLICK_THRESHOLD) {
+                    // Exit app on double-press
+                    finish()
+                } else {
+                    lastBackPressTime = currentTime
+                    // On single press, navigate back if not on main menu
+                    if (navController.currentBackStackEntry?.destination?.route != NavRoutes.MainMenu) {
+                        navController.popBackStack()
+                    }
+                }
             } else {
-                lastBackPressTime = currentTime
-                if (navController.previousBackStackEntry != null) {
+                // Default behavior: navigate back or exit if at start
+                if (navController.currentBackStackEntry?.destination?.route != NavRoutes.MainMenu) {
                     navController.popBackStack()
-                } else if (!remoteBackDoubleClick) {
+                } else {
                     finish()
                 }
             }
         }
 
-        NavHost(
-            navController = navController,
-            startDestination = "main"
-        ) {
-            // Main menu
-            composable("main") {
+        NavHost(navController = navController, startDestination = NavRoutes.MainMenu) {
+            composable(NavRoutes.MainMenu) {
                 MainMenuScreen(
-                    onNavigateToConnect = { navController.navigate("connect") },
-                    onNavigateToMouse = { navController.navigate("mouse") },
-                    onNavigateToTouchpad = { navController.navigate("touchpad") },
-                    onNavigateToKeyboard = { navController.navigate("keyboard") },
-                    onNavigateToMedia = { navController.navigate("media") },
-                    onNavigateToSettings = { navController.navigate("settings") },
-                    onNavigateToDpad = { navController.navigate("dpad") }
+                    onNavigateToMouse = { navController.navigate(NavRoutes.Mouse) },
+                    onNavigateToTouchpad = { navController.navigate(NavRoutes.Touchpad) },
+                    onNavigateToKeyboard = { navController.navigate(NavRoutes.Keyboard) },
+                    onNavigateToMedia = { navController.navigate(NavRoutes.Media) },
+                    onNavigateToDpad = { navController.navigate(NavRoutes.DPad) },
+                    onNavigateToSettings = { navController.navigate(NavRoutes.Settings) },
+                    onNavigateToConnect = { navController.navigate(NavRoutes.ConnectDevice) }
                 )
             }
-
-            // Input modes - optimized navigation
-            composable("keyboard") {
-                KeyboardScreen(
-                    onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/keyboard") }
-                )
-            }
-
-            composable("touchpad") {
-                TouchpadScreen(
-                    onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/touchpad") }
-                )
-            }
-
-            composable("mouse") {
+            composable(NavRoutes.Mouse) {
                 MouseScreen(
                     onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/mouse") }
+                    onScrollPopup = { navController.navigate("scrollPopup/mouse") },
+                    onSwipeLeft = { navigateLeft(NavRoutes.Mouse) },
+                    onSwipeRight = { navigateRight(NavRoutes.Mouse) }
                 )
             }
-
-            composable("dpad") {
-                DpadScreen(
+            composable(NavRoutes.Touchpad) {
+                TouchpadScreen(
                     onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/dpad") }
+                    onScrollPopup = { navController.navigate("scrollPopup/touchpad") },
+                    onSwipeLeft = { navigateLeft(NavRoutes.Touchpad) },
+                    onSwipeRight = { navigateRight(NavRoutes.Touchpad) }
                 )
             }
-
-            composable("media") {
+            composable(NavRoutes.Keyboard) {
+                KeyboardScreen(
+                    onBack = { navController.popBackStack() },
+                    onScrollPopup = { navController.navigate("scrollPopup/keyboard") },
+                    onSwipeLeft = { navigateLeft(NavRoutes.Keyboard) },
+                    onSwipeRight = { navigateRight(NavRoutes.Keyboard) }
+                )
+            }
+            composable(NavRoutes.Media) {
                 MediaScreen(
                     onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/media") }
+                    onScrollPopup = { navController.navigate("scrollPopup/media") },
+                    onSwipeLeft = { navigateLeft(NavRoutes.Media) },
+                    onSwipeRight = { navigateRight(NavRoutes.Media) }
                 )
             }
-
-            // Settings and configuration
-            composable("settings") {
+            composable(NavRoutes.DPad) {
+                DpadScreen(
+                    onBack = { navController.popBackStack() },
+                    onScrollPopup = { navController.navigate("scrollPopup/dpad") },
+                    onSwipeLeft = { navigateLeft(NavRoutes.DPad) },
+                    onSwipeRight = { navigateRight(NavRoutes.DPad) }
+                )
+            }
+            composable(NavRoutes.Settings) {
                 SettingsScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigateToMouseCalibration = { navController.navigate("mouseCalibration") }
+                    onNavigateToMouseCalibration = { navController.navigate(NavRoutes.MouseCalibration) },
+                    onSwipeLeft = { navigateLeft(NavRoutes.Settings) },
+                    onSwipeRight = { navigateRight(NavRoutes.Settings) }
                 )
             }
-
-            composable("connect") {
-                ConnectToDeviceScreen(
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable("mouseCalibration") {
+            composable(NavRoutes.MouseCalibration) {
                 MouseCalibrationScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
-
-            // Scroll popup with parent parameter
             composable(
-                "scrollPopup/{parent}",
+                route = "scrollPopup/{parent}",
                 arguments = listOf(navArgument("parent") { type = NavType.StringType })
             ) { backStackEntry ->
-                val parent = backStackEntry.arguments?.getString("parent") ?: "main"
                 ScrollPopupScreen(
-                    parentScreen = parent,
+                    parentScreen = backStackEntry.arguments?.getString("parent") ?: "unknown",
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(NavRoutes.ConnectDevice) {
+                ConnectToDeviceScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

@@ -1,22 +1,33 @@
 package com.example.inmocontrol_v2.hid
 
-import android.bluetooth.BluetoothDevice
-import com.example.inmocontrol_v2.data.DeviceProfile
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.lang.ref.WeakReference
-import java.util.concurrent.atomic.AtomicReference
+import android.bluetooth.BluetoothDevice
 
 /**
- * HID Client singleton that provides access to HID service functionality
- * Updated for 2025 compatibility with improved error handling
+ * UI-facing singleton - Exposes StateFlow signals and HID actions to Compose screens.
+ *
+ * Critical Rules from Copilot Instructions:
+ * - ALWAYS use HidClient methods in UI code, never direct service calls
+ * - Keep all methods synchronous (Boolean return) for instant Compose reactivity
+ * - Collect StateFlows with .collectAsState() in Composables
  */
 object HidClient {
-    // Service reference with improved memory management
-    private val serviceRef = AtomicReference<WeakReference<HidServiceApi>?>()
 
-    // State flows for UI with enhanced reactivity
+    private const val TAG = "HidClient"
+
+    // Service binding
+    private var hidService: HidService? = null
+    private var isBound = false
+
+    // State flows for reactive UI
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
@@ -29,175 +40,169 @@ object HidClient {
     private val _hidProfileAvailable = MutableStateFlow(false)
     val hidProfileAvailable: StateFlow<Boolean> = _hidProfileAvailable.asStateFlow()
 
-    // Current device profile with null safety
-    var currentDeviceProfile: DeviceProfile?
-        get() = getService()?.currentDeviceProfile
-        set(value) {
-            getService()?.currentDeviceProfile = value
+    // Service connection callbacks
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            val localBinder = binder as? HidService.LocalBinder
+            hidService = localBinder?.getService()
+            isBound = true
+            _isServiceReady.value = hidService?.isReady() ?: false
+            Log.d(TAG, "HidService bound successfully")
         }
 
-    // Service management with improved error handling
-    fun setService(service: HidServiceApi?) {
-        val newRef = service?.let { WeakReference(it) }
-        serviceRef.set(newRef)
-
-        // Update state flows atomically
-        val isReady = service?.isReady() == true
-        val isConnected = service?.isDeviceConnected() == true
-
-        _isServiceReady.value = isReady
-        _hidProfileAvailable.value = service != null
-        _isConnected.value = isConnected
-
-        if (service == null) {
-            _connectionError.value = "Service not available"
-        } else {
-            _connectionError.value = null
+        override fun onServiceDisconnected(name: ComponentName?) {
+            hidService = null
+            isBound = false
+            _isServiceReady.value = false
+            _isConnected.value = false
+            Log.d(TAG, "HidService unbound")
         }
     }
 
-    fun setConnectionError(error: String?) {
+    /**
+     * Bind to HidService. Call from MainActivity.onCreate()
+     */
+    fun bindService(context: Context) {
+        val intent = Intent(context, HidService::class.java)
+        context.startForegroundService(intent)
+        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        Log.d(TAG, "Binding to HidService")
+    }
+
+    /**
+     * Unbind from HidService. Call from MainActivity.onDestroy()
+     */
+    fun unbindService(context: Context) {
+        if (isBound) {
+            context.unbindService(serviceConnection)
+            isBound = false
+            hidService = null
+            Log.d(TAG, "Unbound from HidService")
+        }
+    }
+
+    // Internal state setters (called by HidService)
+    internal fun setConnectionState(connected: Boolean) {
+        _isConnected.value = connected
+    }
+
+    internal fun setConnectionError(error: String?) {
         _connectionError.value = error
+    }
+
+    internal fun setServiceReady(ready: Boolean) {
+        _isServiceReady.value = ready
+    }
+
+    internal fun setHidProfileAvailable(available: Boolean) {
+        _hidProfileAvailable.value = available
     }
 
     fun clearError() {
         _connectionError.value = null
     }
 
-    fun setConnectionState(connected: Boolean) {
-        _isConnected.value = connected
+    // Helper to get service safely
+    private fun getService(): HidServiceApi? {
+        return hidService?.takeIf { isBound && it.isReady() }
     }
 
-    fun setHidProfileAvailable(available: Boolean) {
-        _hidProfileAvailable.value = available
-    }
-
-    // Private helper to get service with null safety
-    private fun getService(): HidServiceApi? = serviceRef.get()?.get()
-
-    // Connection methods with error handling
+    // Connection management
     fun connectToDevice(device: BluetoothDevice): Boolean {
-        return try {
-            getService()?.connectToDevice(device) ?: false
-        } catch (e: Exception) {
-            setConnectionError("Connection failed: ${e.message}")
-            false
-        }
+        return getService()?.connectToDevice(device) ?: false
     }
 
-    fun disconnectFromDevice(): Boolean {
-        return try {
-            getService()?.disconnectFromDevice() ?: false
-        } catch (e: Exception) {
-            setConnectionError("Disconnection failed: ${e.message}")
-            false
-        }
-    }
+    // ==================== MOUSE OPERATIONS ====================
 
-    fun startAdvertising(): Boolean {
-        return try {
-            getService()?.startAdvertising() ?: false
-        } catch (e: Exception) {
-            setConnectionError("Failed to start advertising: ${e.message}")
-            false
-        }
-    }
-
-    fun stopAdvertising(): Boolean {
-        return try {
-            getService()?.stopAdvertising() ?: false
-        } catch (e: Exception) {
-            setConnectionError("Failed to stop advertising: ${e.message}")
-            false
-        }
-    }
-
-    // Input methods with improved error handling
     fun sendMouseMovement(deltaX: Float, deltaY: Float): Boolean {
-        return try {
-            getService()?.sendMouseMovement(deltaX, deltaY) ?: false
-        } catch (e: Exception) {
-            false
-        }
+        return getService()?.sendMouseMovement(deltaX, deltaY) ?: false
     }
 
-    // Media control methods
-    fun sendPlayPause(): Boolean = getService()?.sendPlayPause() ?: false
-    fun sendNextTrack(): Boolean = getService()?.sendNextTrack() ?: false
-    fun sendPreviousTrack(): Boolean = getService()?.sendPreviousTrack() ?: false
-    fun sendVolumeUp(): Boolean = getService()?.sendVolumeUp() ?: false
-    fun sendVolumeDown(): Boolean = getService()?.sendVolumeDown() ?: false
-    fun sendMute(): Boolean = getService()?.sendMute() ?: false
-
-    // D-pad methods
-    fun sendDpadUp(): Boolean = getService()?.sendDpadUp() ?: false
-    fun sendDpadDown(): Boolean = getService()?.sendDpadDown() ?: false
-    fun sendDpadLeft(): Boolean = getService()?.sendDpadLeft() ?: false
-    fun sendDpadRight(): Boolean = getService()?.sendDpadRight() ?: false
-    fun sendDpadCenter(): Boolean = getService()?.sendDpadCenter() ?: false
-
-    // Raw input for compatibility with all HID protocols
-    fun sendRawInput(data: ByteArray): Boolean = getService()?.sendRawInput(data) ?: false
-
-    // Additional helper methods used by UI screens
-    fun sendInmoConfirm(): Boolean = sendDpadCenter()
-
-    fun dpad(direction: Int): Boolean {
-        return when (direction) {
-            0 -> sendDpadUp()
-            1 -> sendDpadDown()
-            2 -> sendDpadLeft()
-            3 -> sendDpadRight()
-            4 -> sendDpadCenter()
-            5 -> sendDpadDown() && sendDpadLeft() // DOWN-LEFT
-            6 -> sendDpadDown() && sendDpadRight() // DOWN-RIGHT
-            7 -> sendDpadUp() && sendDpadLeft() // UP-LEFT
-            8 -> sendDpadUp() && sendDpadRight() // UP-RIGHT
-            else -> false
-        }
+    fun sendLeftClick(): Boolean {
+        return getService()?.sendLeftClick() ?: false
     }
 
-    // Mouse action methods that are missing
-    fun mouseLeftClick(): Boolean = sendLeftClick()
-    fun mouseRightClick(): Boolean = sendRightClick()
-    fun mouseScroll(deltaX: Int, deltaY: Int): Boolean = sendScroll(deltaX.toFloat(), deltaY.toFloat())
-
-    // Additional convenience methods
-    fun sendLeftClick(): Boolean = getService()?.sendLeftClick() ?: false
-    fun sendRightClick(): Boolean = getService()?.sendRightClick() ?: false
-    fun sendMiddleClick(): Boolean = getService()?.sendMiddleClick() ?: false
-    fun sendDoubleClick(): Boolean = getService()?.sendDoubleClick() ?: false
-
-    // Media control convenience methods
-    fun playPause(): Boolean = sendPlayPause()
-    fun nextTrack(): Boolean = sendNextTrack()
-    fun previousTrack(): Boolean = sendPreviousTrack()
-    fun volumeUp(): Boolean = sendVolumeUp()
-    fun volumeDown(): Boolean = sendVolumeDown()
-    fun mute(): Boolean = sendMute()
-
-    // Text and key input methods
-    fun sendScroll(deltaX: Float, deltaY: Float): Boolean {
-        return try {
-            getService()?.sendScroll(deltaX, deltaY) ?: false
-        } catch (e: Exception) {
-            false
-        }
+    fun sendRightClick(): Boolean {
+        return getService()?.sendRightClick() ?: false
     }
+
+    fun sendMiddleClick(): Boolean {
+        return getService()?.sendMiddleClick() ?: false
+    }
+
+    fun sendDoubleClick(): Boolean {
+        return getService()?.sendDoubleClick() ?: false
+    }
+
+    fun sendMouseScroll(deltaX: Float, deltaY: Float): Boolean {
+        return getService()?.sendMouseScroll(deltaX, deltaY) ?: false
+    }
+
+    // ==================== KEYBOARD OPERATIONS ====================
 
     fun sendKey(keyCode: Int, modifiers: Int = 0): Boolean {
-        return try {
-            getService()?.sendKey(keyCode, modifiers) ?: false
-        } catch (e: Exception) {
-            false
-        }
+        return getService()?.sendKey(keyCode, modifiers) ?: false
     }
 
     fun sendText(text: String): Boolean {
-        return try {
-            getService()?.sendText(text) ?: false
-        } catch (e: Exception) {
-            false
-        }
+        return getService()?.sendText(text) ?: false
+    }
+
+    // ==================== MEDIA CONTROLS ====================
+
+    fun playPause(): Boolean {
+        return getService()?.playPause() ?: false
+    }
+
+    fun nextTrack(): Boolean {
+        return getService()?.nextTrack() ?: false
+    }
+
+    fun previousTrack(): Boolean {
+        return getService()?.previousTrack() ?: false
+    }
+
+    fun volumeUp(): Boolean {
+        return getService()?.volumeUp() ?: false
+    }
+
+    fun volumeDown(): Boolean {
+        return getService()?.volumeDown() ?: false
+    }
+
+    fun mute(): Boolean {
+        return getService()?.mute() ?: false
+    }
+
+    // ==================== D-PAD NAVIGATION ====================
+
+    fun dpad(direction: Int): Boolean {
+        return getService()?.dpad(direction) ?: false
+    }
+
+    fun sendDpadUp(): Boolean {
+        return getService()?.sendDpadUp() ?: false
+    }
+
+    fun sendDpadDown(): Boolean {
+        return getService()?.sendDpadDown() ?: false
+    }
+
+    fun sendDpadLeft(): Boolean {
+        return getService()?.sendDpadLeft() ?: false
+    }
+
+    fun sendDpadRight(): Boolean {
+        return getService()?.sendDpadRight() ?: false
+    }
+
+    fun sendDpadCenter(): Boolean {
+        return getService()?.sendDpadCenter() ?: false
+    }
+
+    // ==================== RAW HID ====================
+
+    fun sendRawInput(data: ByteArray): Boolean {
+        return getService()?.sendRawInput(data) ?: false
     }
 }

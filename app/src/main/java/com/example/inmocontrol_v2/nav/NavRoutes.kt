@@ -1,5 +1,6 @@
 package com.example.inmocontrol_v2.nav
-object Routes {
+
+object NavRoutes {
     const val MainMenu = "main"
     const val Keyboard = "keyboard"
     const val Touchpad = "touchpad"
@@ -8,6 +9,6 @@ object Routes {
     const val Media = "media"
     const val Settings = "settings"
     const val MouseCalibration = "mouse_calibration"
-    const val ConnectDevice = "connect_device" // Added device connection route
-    const val ModeSelect = "mode_select" // Added mode selection route
+    const val ConnectDevice = "connect_device"
 }
+

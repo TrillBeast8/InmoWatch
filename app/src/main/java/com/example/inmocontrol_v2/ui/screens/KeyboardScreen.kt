@@ -1,6 +1,7 @@
 package com.example.inmocontrol_v2.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -16,9 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.*
-import com.example.inmocontrol_v2.hid.HidClient
-import com.example.inmocontrol_v2.data.DeviceProfile
 import com.example.inmocontrol_v2.data.SettingsStore
+import com.example.inmocontrol_v2.hid.HidClient
+import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -30,16 +31,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun KeyboardScreen(
     onBack: () -> Unit = {},
-    onScrollPopup: () -> Unit = {}
+    onScrollPopup: () -> Unit = {},
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val settingsStore = remember { SettingsStore.get(context) }
     val scope = rememberCoroutineScope()
-
-    // Optimize LaunchedEffect to prevent unnecessary recreations
-    LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.Keyboard
-    }
 
     // Optimized state management with reduced recomposition
     var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
@@ -47,8 +45,8 @@ fun KeyboardScreen(
     var showSentFeedback by remember { mutableStateOf(false) }
 
     // Cached focus and keyboard controller
-    val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
 
     // Optimized state collection with distinctUntilChanged
     val isConnected by HidClient.isConnected.collectAsState()
@@ -146,7 +144,11 @@ fun KeyboardScreen(
     }
 
     Scaffold(
-        timeText = { TimeText() }
+        timeText = { TimeText() },
+        modifier = Modifier.detectTwoFingerSwipe(
+            onSwipeLeft = onSwipeLeft,
+            onSwipeRight = onSwipeRight
+        )
     ) {
         ScalingLazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -195,46 +197,50 @@ fun KeyboardScreen(
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
 
-                    // Use Wear Compose Card instead of Material 3 TextField
-                    Card(
-                        onClick = { focusRequester.requestFocus() },
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundPainter = CardDefaults.cardBackgroundPainter(
-                            startBackgroundColor = MaterialTheme.colors.surface,
-                            endBackgroundColor = MaterialTheme.colors.surface
+                    BasicTextField(
+                        value = textFieldValue,
+                        onValueChange = handleTextChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester),
+                        textStyle = LocalTextStyle.current.copy(
+                            color = MaterialTheme.colors.onBackground,
+                            textAlign = TextAlign.Center
                         )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(8.dp)
-                        ) {
-                            Text(
-                                text = if (textFieldValue.text.isEmpty()) {
-                                    if (isRealtimeMode) "Live typing..." else "Enter text..."
-                                } else textFieldValue.text,
-                                style = MaterialTheme.typography.body2,
-                                color = if (textFieldValue.text.isEmpty()) Color.Gray else Color.White,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
+                    )
                 }
             }
 
-            // Control buttons row
+            // Feedback for deferred mode
+            if (showSentFeedback && !isRealtimeMode) {
+                item {
+                    Text(
+                        text = "✓ Sent: \"$lastSentText\"",
+                        color = MaterialTheme.colors.secondary,
+                        style = MaterialTheme.typography.caption1,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // Control buttons
             item {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = { if (isConnected) HidClient.sendKey(0x2A) },
-                        modifier = Modifier.weight(1f),
-                        enabled = isConnected,
-                        colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.error)
-                    ) {
-                        Text("⌫", fontSize = 14.sp)
+                    // Send button (deferred mode)
+                    if (!isRealtimeMode) {
+                        Button(
+                            onClick = { sendText(textFieldValue.text) },
+                            enabled = isConnected && textFieldValue.text.isNotEmpty(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Send", fontSize = 10.sp)
+                        }
                     }
 
+                    // Clear button
                     Button(
                         onClick = {
                             textFieldValue = TextFieldValue("")
@@ -245,6 +251,7 @@ fun KeyboardScreen(
                         Text("Clear", fontSize = 10.sp)
                     }
 
+                    // Back button
                     Button(
                         onClick = onBack,
                         modifier = Modifier.weight(1f)
@@ -254,59 +261,24 @@ fun KeyboardScreen(
                 }
             }
 
-            // Send button and mode toggle
+            // Mode toggle
             item {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (!isRealtimeMode) {
-                        Button(
-                            onClick = {
-                                sendText(textFieldValue.text)
-                                keyboardController?.hide()
-                            },
-                            modifier = Modifier.weight(1f),
-                            enabled = isConnected && textFieldValue.text.isNotEmpty(),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
-                        ) {
-                            Text("Send", fontSize = 10.sp)
+                ToggleChip(
+                    checked = isRealtimeMode,
+                    onCheckedChange = {
+                        scope.launch {
+                            settingsStore.setRealtimeKeyboard(it)
                         }
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-
-                    ToggleChip(
-                        checked = isRealtimeMode,
-                        onCheckedChange = { scope.launch { settingsStore.setRealtimeKeyboard(it) } },
-                        label = { Text(if (isRealtimeMode) "RT" else "D", fontSize = 10.sp) },
-                        modifier = Modifier.width(60.dp),
-                        toggleControl = {
-                            Switch(
-                                checked = isRealtimeMode,
-                                onCheckedChange = null
-                            )
-                        },
-                        colors = ToggleChipDefaults.toggleChipColors(
-                            checkedStartBackgroundColor = MaterialTheme.colors.secondary,
-                            checkedEndBackgroundColor = MaterialTheme.colors.secondary
+                    },
+                    label = { Text("Realtime Mode") },
+                    toggleControl = {
+                        Switch(
+                            checked = isRealtimeMode,
+                            onCheckedChange = null
                         )
-                    )
-                }
-            }
-
-            // Feedback message - only show when relevant
-            if (showSentFeedback && !isRealtimeMode) {
-                item {
-                    Text(
-                        text = "Sent: $lastSentText",
-                        color = MaterialTheme.colors.secondary,
-                        style = MaterialTheme.typography.caption1,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

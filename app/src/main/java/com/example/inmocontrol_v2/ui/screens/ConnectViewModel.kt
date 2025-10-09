@@ -15,7 +15,6 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.inmocontrol_v2.hid.HidClient
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,14 +51,19 @@ class ConnectViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
                 BluetoothDevice.ACTION_FOUND -> {
-                    val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    val device: BluetoothDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    }
                     device?.let { foundDevice ->
                         try {
                             // Check if device has a name and add it to discovered devices
                             var deviceName: String? = null
                             try {
                                 deviceName = foundDevice.name
-                            } catch (e: SecurityException) {
+                            } catch (_: SecurityException) {
                                 // Permission denied, deviceName stays null
                             }
 
@@ -138,7 +142,7 @@ class ConnectViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun connectToDevice(device: BluetoothDevice) {
+    fun connect(device: BluetoothDevice) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && ContextCompat.checkSelfPermission(
                 getApplication(),
                 Manifest.permission.BLUETOOTH_CONNECT
@@ -146,7 +150,8 @@ class ConnectViewModel(application: Application) : AndroidViewModel(application)
         ) {
             return
         }
-        HidClient.connectToDevice(device)
+        // Fully qualify HidClient to avoid any potential resolution ambiguity
+        com.example.inmocontrol_v2.hid.HidClient.connectToDevice(device)
     }
 
     private fun loadPairedDevices() {
@@ -169,7 +174,7 @@ class ConnectViewModel(application: Application) : AndroidViewModel(application)
         super.onCleared()
         try {
             unregisterReceiver()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Receiver might not be registered
         }
     }

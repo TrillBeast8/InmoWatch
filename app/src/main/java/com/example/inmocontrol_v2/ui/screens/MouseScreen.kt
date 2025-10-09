@@ -20,8 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
 import com.example.inmocontrol_v2.hid.HidClient
-import com.example.inmocontrol_v2.data.DeviceProfile
 import com.example.inmocontrol_v2.sensors.WearMouseSensorFusion
+import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
 import kotlinx.coroutines.delay
 import kotlin.math.min
 
@@ -31,7 +31,9 @@ import kotlin.math.min
 @Composable
 fun MouseScreen(
     onBack: () -> Unit = {},
-    onScrollPopup: () -> Unit = {}
+    onScrollPopup: () -> Unit = {},
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -61,11 +63,6 @@ fun MouseScreen(
         }
     }
 
-    // Device profile setup - preserving original behavior
-    LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.Mouse
-    }
-
     // Sensor lifecycle - preserving original management
     DisposableEffect(isConnected) {
         if (isConnected) {
@@ -92,7 +89,13 @@ fun MouseScreen(
         }
     }
 
-    Scaffold(timeText = { TimeText() }) {
+    Scaffold(
+        timeText = { TimeText() },
+        modifier = Modifier.detectTwoFingerSwipe(
+            onSwipeLeft = onSwipeLeft,
+            onSwipeRight = onSwipeRight
+        )
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()

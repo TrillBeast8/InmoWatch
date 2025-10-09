@@ -23,7 +23,7 @@ import androidx.wear.compose.material.*
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.Text as WearText
 import com.example.inmocontrol_v2.hid.HidClient
-import com.example.inmocontrol_v2.data.DeviceProfile
+import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
 import kotlinx.coroutines.delay
 
 /**
@@ -33,12 +33,10 @@ import kotlinx.coroutines.delay
 @Composable
 fun MediaScreen(
     onBack: () -> Unit = {},
-    onScrollPopup: () -> Unit = {}
+    onScrollPopup: () -> Unit = {},
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {}
 ) {
-    LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.Generic
-    }
-
     // State management
     var isPlaying by remember { mutableStateOf(false) }
     var currentVolume by remember { mutableStateOf(50) }
@@ -96,7 +94,11 @@ fun MediaScreen(
     }
 
     Scaffold(
-        timeText = { TimeText() }
+        timeText = { TimeText() },
+        modifier = Modifier.detectTwoFingerSwipe(
+            onSwipeLeft = onSwipeLeft,
+            onSwipeRight = onSwipeRight
+        )
     ) {
         Box(
             modifier = Modifier

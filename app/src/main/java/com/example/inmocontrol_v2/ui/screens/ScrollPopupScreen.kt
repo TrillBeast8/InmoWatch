@@ -55,7 +55,7 @@ fun ScrollPopupScreen(
             if (pendingClick) { // Still pending, execute single click
                 pendingClick = false
                 when (currentMode) {
-                    PopupMode.SCROLL -> HidClient.mouseLeftClick() // Left click in scroll mode
+                    PopupMode.SCROLL -> HidClient.sendLeftClick() // Left click in scroll mode
                     PopupMode.DPAD -> HidClient.dpad(4) // D-pad center/confirm in D-pad mode
                 }
             }
@@ -74,7 +74,7 @@ fun ScrollPopupScreen(
         if (isConnected) {
             pressedButton = direction
             val scrollAmount = (scrollSensitivity / 10.0f).toInt().coerceAtLeast(1)
-            HidClient.mouseScroll(deltaX * scrollAmount, deltaY * scrollAmount)
+            HidClient.sendMouseScroll(deltaX * scrollAmount.toFloat(), deltaY * scrollAmount.toFloat())
         }
     }
 
@@ -103,7 +103,7 @@ fun ScrollPopupScreen(
 
         if (currentTime - lastCenterClickTime < 300) { // Double click within 300ms
             // Double click = right click in both modes
-            HidClient.mouseRightClick()
+            HidClient.sendRightClick()
         } else {
             // Register pending click for single click action
             pendingClick = true

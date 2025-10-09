@@ -17,18 +17,16 @@ import androidx.wear.compose.material.Text as WearText
 import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.*
 import com.example.inmocontrol_v2.hid.HidClient
-import com.example.inmocontrol_v2.data.DeviceProfile
+import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
 import kotlinx.coroutines.delay
 
 @Composable
 fun DpadScreen(
     onBack: () -> Unit = {},
-    onScrollPopup: () -> Unit = {}
+    onScrollPopup: () -> Unit = {},
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {}
 ) {
-    LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.Generic
-    }
-
     var pressedButton by remember { mutableStateOf<String?>(null) }
     var isScrollMode by remember { mutableStateOf(false) }
 
@@ -50,9 +48,9 @@ fun DpadScreen(
         pressedButton = "CENTER"
 
         if (isScrollMode) {
-            HidClient.mouseLeftClick() // Left click in scroll mode
+            HidClient.sendLeftClick() // Left click in scroll mode
         } else {
-            HidClient.sendInmoConfirm() // Confirm/select in D-pad mode (KEYCODE_DPAD_CENTER)
+            HidClient.sendDpadCenter() // Confirm/select in D-pad mode (KEYCODE_DPAD_CENTER)
         }
     }
 
@@ -60,7 +58,7 @@ fun DpadScreen(
     fun handleCenterButtonDoubleClick() {
         if (!isConnected) return
         pressedButton = "CENTER"
-        HidClient.mouseRightClick() // Right click for context menu in both modes
+        HidClient.sendRightClick() // Right click for context menu in both modes
     }
 
     fun onButtonPress(buttonName: String, direction: Int) {
@@ -69,10 +67,10 @@ fun DpadScreen(
             if (isScrollMode) {
                 // Scroll mode - only UP, DOWN, LEFT, RIGHT work for scrolling
                 when (direction) {
-                    0 -> HidClient.mouseScroll(0, -3) // UP
-                    1 -> HidClient.mouseScroll(0, 3)  // DOWN
-                    2 -> HidClient.mouseScroll(-3, 0) // LEFT
-                    3 -> HidClient.mouseScroll(3, 0)  // RIGHT
+                    0 -> HidClient.sendMouseScroll(0f, -3f) // UP
+                    1 -> HidClient.sendMouseScroll(0f, 3f)  // DOWN
+                    2 -> HidClient.sendMouseScroll(-3f, 0f) // LEFT
+                    3 -> HidClient.sendMouseScroll(3f, 0f)  // RIGHT
                 }
             } else {
                 // Normal 8-way D-pad mode with corrected direction mapping
@@ -82,7 +80,11 @@ fun DpadScreen(
     }
 
     Scaffold(
-        timeText = { TimeText() }
+        timeText = { TimeText() },
+        modifier = Modifier.detectTwoFingerSwipe(
+            onSwipeLeft = onSwipeLeft,
+            onSwipeRight = onSwipeRight
+        )
     ) {
         Column(
             modifier = Modifier

@@ -50,14 +50,12 @@
 - `HidDeviceProfile`: Registers Bluetooth HID profile proxy with the Android stack
 - `HidDeviceApp`: Defines SDP/QoS descriptors and app registration callbacks
 - `HidInputManager`: Assembles and sends HID reports for all input modes
-- `DeviceProfile`: Enum for device-specific optimizations (Generic, Mouse, Keyboard, Media, InmoAir2, etc.)
 
 **Critical Rules**:
 - ✅ Register/unregister HID profile **on main thread only**
 - ✅ Release proxy resources in `unregisterServiceListener()` to prevent memory leaks
 - ✅ Maintain foreground notification while paired to dodge Samsung doze
 - ✅ When host transitions to `BluetoothProfile.STATE_DISCONNECTING`, retry `registerApp()` with exponential backoff (100ms → 500ms → 1s)
-- ✅ Auto-detect INMO Air2 devices and prefer `InmoAir2InputProfile`; fallback to `UniversalInputProfile` without tearing down session
 
 #### **HidClient** (`hid/HidClient.kt`)
 **UI-facing singleton** - Exposes StateFlow signals and HID actions to Compose screens.
@@ -129,33 +127,7 @@ fun sendRawInput(data: ByteArray): Boolean
 
 ---
 
-### 3. Device Profile System
-
-#### **DeviceProfile** (`data/DeviceProfile.kt`)
-Enum defining device-specific optimizations:
-
-```kotlin
-enum class DeviceProfile(val displayName: String) {
-    Mouse("Mouse"),           // Cursor movement + clicking
-    Keyboard("Keyboard"),     // Text input + hotkeys
-    Media("Media Controls"),  // Play/pause/volume
-    Gamepad("D-Pad"),        // 8-way navigation
-    Touchpad("Touchpad"),    // Touch-based cursor
-    Generic("Generic HID"),  // Fallback
-    InmoAir2("InmoAir2"),   // INMO Air2 glasses optimizations
-    Universal("Universal Device") // Cross-platform compatibility
-}
-```
-
-**Critical Rules**:
-- ✅ Set `HidClient.currentDeviceProfile` in each screen's `LaunchedEffect(Unit)`
-- ✅ Prefer `InmoAir2` profile when INMO device IDs detected (vendor backglass IDs)
-- ✅ Auto-downgrade to `UniversalInputProfile` if descriptor negotiation fails (no reconnect needed)
-- ✅ After connecting to INMO glasses, read battery/mode characteristics and publish to UI state
-
----
-
-### 4. Input Modes & UI Screens
+### 3. Input Modes & UI Screens
 
 All Composables in `ui/screens/` consume state via StateFlows and callbacks. **Keep business logic in ViewModels or HidClient**.
 
@@ -186,7 +158,6 @@ All Composables in `ui/screens/` consume state via StateFlows and callbacks. **K
 
 **Critical Rules**:
 - ✅ Start sensor fusion in `LaunchedEffect(isConnected)`, stop in `DisposableEffect`
-- ✅ Set `DeviceProfile.Mouse` on screen entry
 - ✅ Only emit movements exceeding ±0.5px to reduce CPU usage (done in `WearMouseSensorFusion.stabilizeValue()`)
 - ✅ Update orientation behavior via `setHandMode()`, `setStabilize()`, `setLefty()`
 - ✅ Keep touch targets ≥48dp for Wear OS accessibility
@@ -201,7 +172,6 @@ All Composables in `ui/screens/` consume state via StateFlows and callbacks. **K
 - Scaled movement (deltaX * 0.5f) for touchpad feel
 
 **Critical Rules**:
-- ✅ Set `DeviceProfile.Mouse` on entry
 - ✅ Track last position to calculate deltas, reset on drag end
 - ✅ Apply sensitivity from `SettingsStore.sensitivity`
 - ✅ Preserve scroll popup navigation
@@ -235,10 +205,6 @@ fun KeyboardScreen(
     val context = LocalContext.current
     val settingsStore = remember { SettingsStore.get(context) }
     val scope = rememberCoroutineScope()
-    
-    LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.Keyboard
-    }
     
     val isConnected by HidClient.isConnected.collectAsState()
     val realtimeMode by settingsStore.realtimeKeyboard.collectAsState(initial = false)
@@ -398,7 +364,6 @@ private fun charToScanCode(char: Char): Pair<Int, Int> {
 **Critical Rules**:
 - ✅ **ALWAYS** use `TextField` or `BasicTextField` to trigger Android system keyboard (IME) - **NEVER** create custom keyboard UI
 - ✅ Use `FocusRequester` to auto-focus input field on screen entry
-- ✅ Set `DeviceProfile.Keyboard` in `LaunchedEffect(Unit)`
 - ✅ In **realtime mode**: Detect delta between `textBuffer` and `lastSentText`, send only new characters or backspaces
 - ✅ In **deferred mode**: Accumulate text, send on "Send" button press via `HidClient.sendText()`
 - ✅ Track `lastSentText` to detect new characters (realtime delta detection)
@@ -738,7 +703,6 @@ detectHorizontalDragGestures { change, dragAmount ->
 ```
 
 **Critical Rules**:
-- ✅ Set `DeviceProfile.Media` in `LaunchedEffect(Unit)`
 - ✅ Use `HidClient.playPause()`, `nextTrack()`, `previousTrack()` for primary controls
 - ✅ Volume controls accessed via **scroll popup overlay** (not on main screen)
 - ✅ Single tap on artwork = play/pause toggle
@@ -791,7 +755,6 @@ detectHorizontalDragGestures { change, dragAmount ->
 ```
 
 **Critical Rules**:
-- ✅ Set `DeviceProfile.Generic` on entry
 - ✅ Call `HidClient.dpad(direction)` for D-pad mode
 - ✅ Call `HidClient.mouseScroll(deltaX, deltaY)` for scroll mode
 - ✅ Disable diagonal buttons in scroll mode (visual alpha 0.3f)
@@ -984,13 +947,9 @@ object Routes {
 - **Battery**: Stop sensor fusion when disconnected, use WorkManager without charging/idle constraints
 - **Reconnection**: Exponential backoff (100ms → 500ms → 1s) on `BluetoothProfile.STATE_DISCONNECTING`
 
-#### **INMO Air2 Smart Glasses**
-- **Profile Detection**: Prefer `InmoAir2InputProfile` when INMO vendor IDs detected
-- **Fallback**: Auto-downgrade to `UniversalInputProfile` without tearing down session
-- **Characteristics**: Read battery/mode from GATT characteristics and publish to UI
-- **Quick Toggles**: Provide mode switching via `ModeTileService`
+#### **Universal HID Compatibility**
+The app acts as a standard, universal HID device. It does not require device-specific profiles or optimizations.
 
-#### **Cross-Platform HID**
 **HID Descriptor** (`HidConstants.REPORT_DESCRIPTOR`):
 - Report ID 1: Keyboard (8 bytes) - Boot protocol compatible
 - Report ID 2: Mouse (4 bytes) - Boot protocol compatible
@@ -1007,6 +966,24 @@ object Routes {
 
 ## 🔧 Development Guidelines
 
+### 💡 Ultimate Cross-Check for Precision & Smart Code
+Before and after any code is changed, added, altered, or removed, a rigorous check must be performed to ensure correctness. This process, the "Ultimate Cross-Check," guarantees precision and adherence to the best coding approaches.
+
+**Pre-Change Analysis**:
+1.  **Identify Scope**: Clearly define the files and components affected by the requested change.
+2.  **Check for Existing Errors**: Run `get_errors` on the identified files to establish a baseline. Do not proceed if existing errors will interfere with the change.
+3.  **Review Architecture**: Ensure the proposed change aligns with the project's core architecture (MVVM, HidService/Client pattern).
+
+**Post-Change Verification**:
+1.  **Apply Changes**: Use the `insert_edit_into_file` tool to apply the code modifications.
+2.  **Verify Correctness**: Immediately run `get_errors` on all modified files.
+3.  **Analyze & Fix**: If any errors are reported, analyze them.
+    - If the errors are a direct result of the change, fix them immediately.
+    - If the errors are unrelated, inform the user but proceed if the core task is complete.
+4.  **Final Review**: Mentally confirm that the changes are efficient, safe, and follow the project's best practices as outlined in these instructions.
+
+This cross-check ensures that every modification enhances the codebase's quality and stability.
+
 ### Code Style & Best Practices
 
 #### **Kotlin Style**
@@ -1019,10 +996,6 @@ fun MouseScreen(
 ) {
     val isConnected by HidClient.isConnected.collectAsState()
     var lastAction by remember { mutableStateOf("Ready") }
-    
-    LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.Mouse
-    }
     
     DisposableEffect(isConnected) {
         // Cleanup code
@@ -1069,7 +1042,7 @@ try {
 #### **Performance Optimizations**
 - ✅ Minimize allocations in HID paths: Reuse byte arrays
 - ✅ Avoid blocking waits in UI threads: Use coroutines
-- ✅ Enqueue rapid key bursts into Channel, flush at ~8ms intervals
+- ✅ Enqueue rapid key bursts into Channel, flush at ~8ms intervals to balance responsiveness vs power
 - ✅ Stop sensor fusion when disconnected to save battery
 - ✅ Use `distinctUntilChanged()` on StateFlows to reduce recompositions
 - ✅ Cache computed values with `remember(key)` in Composables
@@ -1129,13 +1102,7 @@ Log.d(TAG, "Debug message: ${device.name}")
 
 **Example: Adding a "Volume Dial" mode**
 
-1. **Add DeviceProfile Enum**:
-```kotlin
-// data/DeviceProfile.kt
-VolumeDial("Volume Dial"),
-```
-
-2. **Extend HidServiceApi & HidService**:
+1. **Extend HidServiceApi & HidService**:
 ```kotlin
 // hid/HidServiceApi.kt
 fun sendVolumeDialRotate(delta: Int): Boolean
@@ -1145,7 +1112,7 @@ override fun sendVolumeDialRotate(delta: Int): Boolean =
     hidInputManager.sendVolumeDialRotate(delta)
 ```
 
-3. **Implement in HidInputManager**:
+2. **Implement in HidInputManager**:
 ```kotlin
 // bluetooth/HidInputManager.kt
 fun sendVolumeDialRotate(delta: Int): Boolean {
@@ -1158,22 +1125,18 @@ fun sendVolumeDialRotate(delta: Int): Boolean {
 }
 ```
 
-4. **Surface in HidClient**:
+3. **Surface in HidClient**:
 ```kotlin
 // hid/HidClient.kt
 fun volumeDialRotate(delta: Int): Boolean = 
     getService()?.sendVolumeDialRotate(delta) ?: false
 ```
 
-5. **Create UI Screen**:
+4. **Create UI Screen**:
 ```kotlin
 // ui/screens/VolumeDialScreen.kt
 @Composable
 fun VolumeDialScreen(onBack: () -> Unit = {}) {
-    LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.VolumeDial
-    }
-    
     val isConnected by HidClient.isConnected.collectAsState()
     var currentVolume by remember { mutableStateOf(50) }
     
@@ -1181,7 +1144,7 @@ fun VolumeDialScreen(onBack: () -> Unit = {}) {
 }
 ```
 
-6. **Update Navigation**:
+5. **Update Navigation**:
 ```kotlin
 // nav/NavRoutes.kt
 const val VolumeDial = "volume_dial"
@@ -1360,7 +1323,6 @@ Before committing changes, ensure:
 
 - [ ] **Bluetooth calls** are guarded by permission checks
 - [ ] **StateFlows** are collected with `.collectAsState()`
-- [ ] **Device profile** is set in screen's `LaunchedEffect(Unit)`
 - [ ] **Sensor fusion** is stopped in `DisposableEffect` cleanup
 - [ ] **HID reports** use correct report IDs and byte layouts
 - [ ] **Touch targets** are ≥48dp for Wear OS
@@ -1393,17 +1355,29 @@ Before committing changes, ensure:
 This InmoWatch project is a **production-grade Wear OS HID controller** designed for:
 - **Performance**: Minimal allocations, coroutine-based async, sensor fusion optimizations
 - **Reliability**: Foreground service lifecycle, auto-reconnect, error recovery
-- **Extensibility**: Clean architecture, device profiles, pluggable input modes
+- **Extensibility**: Clean architecture, pluggable input modes
 - **User Experience**: Reactive Compose UI, visual feedback, settings persistence
 
 **When generating code, prioritize**:
 - ✅ **Safety**: Permission checks, null safety, error handling
 - ✅ **Efficiency**: Battery-aware, memory-conscious, responsive
 - ✅ **Maintainability**: KDoc, clear naming, separation of concerns
-- ✅ **Compatibility**: Galaxy Watch4, INMO Air2, cross-platform HID
+- ✅ **Compatibility**: Galaxy Watch4, and any standard HID-compliant host.
 
 **Always route HID operations through HidService → HidClient → UI** to maintain the clean architecture that makes this app robust and maintainable.
 
 ---
 
-**End of Copilot Workspace Instructions**
+## ⚡ Global Gestures
+
+### Two-Finger Swipe Navigation
+A global two-finger horizontal swipe gesture is implemented for "power users" to quickly navigate between the primary input modes. This allows for seamless switching without returning to the main menu.
+
+**Navigation Cycle**:
+- **Swipe Right**: `Mouse` → `Touchpad` → `Keyboard` → `Media` → `Dpad` → `Settings` → `Mouse`
+- **Swipe Left**: `Mouse` → `Settings` → `Dpad` → `Media` → `Keyboard` → `Touchpad` → `Mouse`
+
+**Rules**:
+- The gesture is active on all primary mode screens: `MouseScreen`, `TouchpadScreen`, `KeyboardScreen`, `MediaScreen`, `DpadScreen`, and `SettingsScreen`.
+- The gesture is **disabled** on `MainMenuScreen`, `ConnectToDeviceScreen`, and any popup screens.
+- The gesture requires two or more pointers (fingers) to activate, preventing conflicts with single-finger gestures like swiping on the `MediaScreen` artwork.

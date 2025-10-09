@@ -23,7 +23,7 @@ import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.Text as WearText
 import com.example.inmocontrol_v2.hid.HidClient
-import com.example.inmocontrol_v2.data.DeviceProfile
+import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
 import kotlinx.coroutines.delay
 import kotlin.math.min
 
@@ -33,13 +33,10 @@ import kotlin.math.min
 @Composable
 fun TouchpadScreen(
     onBack: () -> Unit = {},
-    onScrollPopup: () -> Unit = {}
+    onScrollPopup: () -> Unit = {},
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {}
 ) {
-    // Set device profile once
-    LaunchedEffect(Unit) {
-        HidClient.currentDeviceProfile = DeviceProfile.Mouse
-    }
-
     // Optimized state management with reduced recompositions
     var lastAction by remember { mutableStateOf("Ready") }
     var isDragging by remember { mutableStateOf(false) }
@@ -122,7 +119,13 @@ fun TouchpadScreen(
         }
     }
 
-    Scaffold(timeText = { TimeText() }) {
+    Scaffold(
+        timeText = { TimeText() },
+        modifier = Modifier.detectTwoFingerSwipe(
+            onSwipeLeft = onSwipeLeft,
+            onSwipeRight = onSwipeRight
+        )
+    ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
