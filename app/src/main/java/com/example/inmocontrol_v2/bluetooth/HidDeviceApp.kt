@@ -63,14 +63,14 @@ class HidDeviceApp {
     val callback = object : BluetoothHidDevice.Callback() {
         override fun onConnectionStateChanged(device: BluetoothDevice?, state: Int) {
             device?.let {
+                Log.d(TAG, "Connection state changed: device=${it.address}, state=$state")
                 listener?.onConnectionStateChanged(it, state)
-                Log.d(TAG, "Connection state changed: $state")
             }
         }
 
         override fun onAppStatusChanged(pluggedDevice: BluetoothDevice?, registered: Boolean) {
-            listener?.onAppStatusChanged(registered)
             Log.d(TAG, "App status changed: registered=$registered")
+            listener?.onAppStatusChanged(registered)
         }
 
         override fun onGetReport(

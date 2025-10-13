@@ -36,6 +36,7 @@ fun MainMenuScreen(
 ) {
     val context = LocalContext.current
     val isConnected by HidClient.isConnected.collectAsState()
+    val isServiceReady by HidClient.isServiceReady.collectAsState()
     val lastDevice by BluetoothSettingsStore.lastDeviceFlow(context).collectAsState(initial = null)
     val connectionError by HidClient.connectionError.collectAsState()
 
@@ -70,6 +71,14 @@ fun MainMenuScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
+                } else if (!isServiceReady && !isConnected) {
+                    Text(
+                        text = "Initializing HID service...",
+                        color = MaterialTheme.colors.secondary,
+                        style = MaterialTheme.typography.caption1,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
                 } else if (isConnected) {
                     Text(
                         text = "Connected",
@@ -90,16 +99,17 @@ fun MainMenuScreen(
                 item { ControlButton(text = "D-Pad", icon = Icons.Default.Gamepad, onClick = onNavigateToDpad) }
                 item { ControlButton(text = "Settings", icon = Icons.Default.Settings, onClick = onNavigateToSettings) }
             } else {
-                // Connection buttons
+                // Connection buttons (only show when service is ready)
                 item {
                     Button(
                         onClick = onNavigateToConnect,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isServiceReady
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(imageVector = Icons.Default.Bluetooth, contentDescription = "Connect")
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Connect")
+                            Text(if (isServiceReady) "Connect" else "Initializing...")
                         }
                     }
                 }
@@ -114,6 +124,7 @@ fun MainMenuScreen(
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
+                            enabled = isServiceReady,
                             colors = ButtonDefaults.secondaryButtonColors()
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {

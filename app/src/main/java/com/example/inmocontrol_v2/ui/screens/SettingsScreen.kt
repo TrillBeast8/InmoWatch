@@ -14,7 +14,6 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.Text as WearText
 import com.example.inmocontrol_v2.data.SettingsStore
-import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
 import kotlinx.coroutines.launch
 import java.util.Locale
 import androidx.compose.ui.input.pointer.pointerInput
@@ -36,10 +35,7 @@ fun SettingsScreen(
 
     Scaffold(
         timeText = { TimeText() },
-        modifier = Modifier.detectTwoFingerSwipe(
-            onSwipeLeft = onSwipeLeft,
-            onSwipeRight = onSwipeRight
-        )
+        modifier = Modifier
     ) {
         ScalingLazyColumn(
             modifier = Modifier.fillMaxSize(),

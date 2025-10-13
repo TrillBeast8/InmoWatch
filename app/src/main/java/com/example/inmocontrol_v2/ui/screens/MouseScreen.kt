@@ -1,73 +1,84 @@
 package com.example.inmocontrol_v2.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
+import com.example.inmocontrol_v2.data.SettingsStore
 import com.example.inmocontrol_v2.hid.HidClient
 import com.example.inmocontrol_v2.sensors.WearMouseSensorFusion
-import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
+import com.example.inmocontrol_v2.ui.components.QuickLauncher
 import kotlinx.coroutines.delay
-import kotlin.math.min
 
 /**
- * MouseScreen - Preserving original UI and features exactly as designed
+ * MouseScreen - Smooth, elegant, fluid UI for circular Wear OS
+ * Seamless interactions with instant response and modern polish
  */
 @Composable
 fun MouseScreen(
-    onBack: () -> Unit = {},
-    onScrollPopup: () -> Unit = {},
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {}
+    @Suppress("UNUSED_PARAMETER") onBack: () -> Unit = {},
+    onNavigateTo: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val settingsStore = remember { SettingsStore.get(context) }
 
-    // State management - preserving original design
-    var lastAction by remember { mutableStateOf("Ready") }
+    // State with smooth animations
+    var lastAction by remember { mutableStateOf("") }
     var actionFeedbackVisible by remember { mutableStateOf(false) }
+    var showQuickLauncher by remember { mutableStateOf(false) }
+    val sensitivity by settingsStore.sensitivity.collectAsState(initial = 1.0f)
 
-    // Screen size calculation - preserving original logic
-    val configuration = LocalConfiguration.current
-    val mouseAreaSize = remember(configuration) {
-        val minDimension = min(configuration.screenWidthDp, configuration.screenHeightDp)
-        (minDimension * 0.85f).dp
-    }
-
-    // Sensor fusion - preserving original implementation
+    // Sensor fusion
     val sensorFusion = remember { WearMouseSensorFusion(context) }
 
-    // Connection state - preserving original reactive design
+    // Connection state
     val isConnected by HidClient.isConnected.collectAsState()
     val connectionError by HidClient.connectionError.collectAsState()
 
-    // Feedback timing - preserving original timing
+    // Smooth feedback animation
+    val feedbackAlpha by animateFloatAsState(
+        targetValue = if (actionFeedbackVisible) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "feedbackAlpha"
+    )
+
+    val feedbackScale by animateFloatAsState(
+        targetValue = if (actionFeedbackVisible) 1f else 0.8f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "feedbackScale"
+    )
+
+    // Quick fade out
     LaunchedEffect(actionFeedbackVisible) {
         if (actionFeedbackVisible) {
-            delay(1500)
+            delay(600)
             actionFeedbackVisible = false
         }
     }
 
-    // Sensor lifecycle - preserving original management
+    // Sensor lifecycle with sensitivity - STABILITY: Proper cleanup
     DisposableEffect(isConnected) {
         if (isConnected) {
             sensorFusion.start { movement ->
-                HidClient.sendMouseMovement(movement.deltaX, movement.deltaY)
+                val scaledX = movement.deltaX * sensitivity
+                val scaledY = movement.deltaY * sensitivity
+                HidClient.sendMouseMovement(scaledX, scaledY)
             }
         } else {
             sensorFusion.stop()
@@ -78,8 +89,8 @@ fun MouseScreen(
         }
     }
 
-    // Click handler - preserving original logic
-    val handleClick = remember {
+    // Smooth click handler
+    val handleClick = remember(isConnected) {
         { action: String, clickType: () -> Unit ->
             if (isConnected) {
                 clickType()
@@ -90,151 +101,162 @@ fun MouseScreen(
     }
 
     Scaffold(
-        timeText = { TimeText() },
-        modifier = Modifier.detectTwoFingerSwipe(
-            onSwipeLeft = onSwipeLeft,
-            onSwipeRight = onSwipeRight
-        )
+        timeText = {
+            AnimatedVisibility(
+                visible = !isConnected,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically()
+            ) {
+                TimeText()
+            }
+        }
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // Title button - preserving original design and functionality
-            Button(
-                onClick = onScrollPopup,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent)
-            ) {
-                Text(
-                    text = "Mouse",
-                    style = MaterialTheme.typography.title2,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colors.primary
-                )
-            }
-
-            // Connection status - preserving original error display
-            if (!isConnected) {
-                Text(
-                    text = connectionError ?: "Not connected",
-                    color = MaterialTheme.colors.error,
-                    style = MaterialTheme.typography.caption1,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Mouse area - preserving original circular design and gestures
-            Box(
-                modifier = Modifier
-                    .size(mouseAreaSize)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colors.surface.copy(alpha = 0.1f))
-                    .pointerInput(isConnected) {
-                        if (isConnected) {
-                            detectTapGestures(
-                                onTap = {
-                                    handleClick("Left Click") { HidClient.sendLeftClick() }
-                                },
-                                onLongPress = {
-                                    handleClick("Right Click") { HidClient.sendRightClick() }
-                                },
-                                onDoubleTap = {
-                                    handleClick("Double Click") { HidClient.sendDoubleClick() }
-                                }
-                            )
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                // Visual feedback canvas - preserving original graphics
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val center = Offset(size.width / 2, size.height / 2)
-                    val radius = size.minDimension / 2
-
-                    // Outer circle - preserving original styling
-                    drawCircle(
-                        color = if (isConnected) Color.White.copy(alpha = 0.3f)
-                               else Color.Gray.copy(alpha = 0.2f),
-                        radius = radius,
-                        center = center,
-                        style = Stroke(width = 2.dp.toPx())
-                    )
-
-                    // Inner feedback circle - preserving original animation
-                    if (actionFeedbackVisible) {
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.4f),
-                            radius = radius * 0.7f,
-                            center = center
+                .pointerInput(isConnected) {
+                    if (isConnected) {
+                        detectTapGestures(
+                            onTap = { handleClick("Left", HidClient::sendLeftClick) },
+                            onLongPress = { handleClick("Right", HidClient::sendRightClick) },
+                            onDoubleTap = { handleClick("Double", HidClient::sendDoubleClick) }
                         )
                     }
-                }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            // Subtle circular guide - barely visible, elegant
+            Canvas(modifier = Modifier.fillMaxSize(0.92f)) {
+                val center = Offset(size.width / 2, size.height / 2)
+                val radius = size.minDimension / 2
 
-                // Instruction text - preserving original layout and content
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Outer ring - subtle
+                drawCircle(
+                    color = if (isConnected) Color.White.copy(alpha = 0.08f)
+                           else Color.Gray.copy(alpha = 0.05f),
+                    radius = radius,
+                    center = center,
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            }
+
+            // Smooth feedback overlay - center of screen
+            AnimatedVisibility(
+                visible = actionFeedbackVisible,
+                enter = fadeIn(tween(100)) + scaleIn(tween(100)),
+                exit = fadeOut(tween(300))
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .alpha(feedbackAlpha)
+                        .scale(feedbackScale)
+                ) {
                     Text(
-                        text = if (isConnected) "Tap: Left Click" else "Not Connected",
-                        style = MaterialTheme.typography.caption2,
-                        color = Color.White.copy(alpha = 0.8f),
+                        text = lastAction,
+                        color = MaterialTheme.colors.primary,
+                        style = MaterialTheme.typography.title3,
+                        fontSize = 18.sp
+                    )
+                }
+            }
+
+            // Instructions - only when not connected, subtle
+            AnimatedVisibility(
+                visible = !isConnected,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = connectionError ?: "Not Connected",
+                        color = MaterialTheme.colors.error.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.caption1,
                         textAlign = TextAlign.Center
                     )
-                    if (isConnected) {
-                        Text(
-                            text = "Hold: Right Click",
-                            style = MaterialTheme.typography.caption2,
-                            color = Color.White.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = "Double: Double Click",
-                            style = MaterialTheme.typography.caption2,
-                            color = Color.White.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    Text(
+                        text = "Tap to connect",
+                        color = Color.White.copy(alpha = 0.5f),
+                        style = MaterialTheme.typography.caption2,
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
 
-            // Action feedback - preserving original feedback design
-            if (actionFeedbackVisible && isConnected) {
-                Text(
-                    text = "✓ $lastAction",
-                    color = MaterialTheme.colors.secondary,
-                    style = MaterialTheme.typography.caption1,
-                    fontSize = 12.sp
-                )
+            // Connected instructions - minimal, fade in smoothly
+            AnimatedVisibility(
+                visible = isConnected && !actionFeedbackVisible,
+                enter = fadeIn(tween(500)),
+                exit = fadeOut(tween(200))
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.alpha(0.4f)
+                ) {
+                    Text(
+                        text = "Tap · Hold · Double",
+                        color = Color.White,
+                        style = MaterialTheme.typography.caption2,
+                        fontSize = 10.sp
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Control buttons - preserving original button layout
+            // Floating action buttons - elegant minimal design
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // ESC button
                 Button(
                     onClick = {
-                        handleClick("Middle Click") { HidClient.sendMiddleClick() }
+                        if (isConnected) {
+                            HidClient.sendEscape()
+                        }
                     },
-                    modifier = Modifier.weight(1f),
                     enabled = isConnected,
-                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
+                    modifier = Modifier.size(36.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = MaterialTheme.colors.error.copy(alpha = 0.4f)
+                    ),
+                    shape = CircleShape
                 ) {
-                    Text("Mid", fontSize = 10.sp)
+                    Text("⎋", fontSize = 14.sp)
                 }
 
+                // Quick Launcher button
                 Button(
-                    onClick = onBack,
-                    modifier = Modifier.weight(1f)
+                    onClick = { showQuickLauncher = !showQuickLauncher },
+                    modifier = Modifier.size(40.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = if (showQuickLauncher) MaterialTheme.colors.primary.copy(alpha = 0.6f)
+                                        else MaterialTheme.colors.surface.copy(alpha = 0.3f)
+                    )
                 ) {
-                    Text("Back", fontSize = 10.sp)
+                    Text("⋮", fontSize = 18.sp)
                 }
+            }
+            
+            // Quick Launcher overlay
+            AnimatedVisibility(
+                visible = showQuickLauncher,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                QuickLauncher(
+                    onClose = { showQuickLauncher = false },
+                    onNavigateTo = { route ->
+                        showQuickLauncher = false
+                        onNavigateTo(route)
+                    },
+                    currentScreen = "mouse"
+                )
             }
         }
     }

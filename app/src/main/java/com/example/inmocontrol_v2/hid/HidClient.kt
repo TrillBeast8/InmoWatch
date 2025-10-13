@@ -22,10 +22,13 @@ import android.bluetooth.BluetoothDevice
 object HidClient {
 
     private const val TAG = "HidClient"
+    private const val BIND_DEBOUNCE_MS = 500L // Prevent rapid rebinding
 
     // Service binding
     private var hidService: HidService? = null
     private var isBound = false
+    private var isBinding = false
+    private var lastBindTime = 0L
 
     // State flows for reactive UI
     private val _isConnected = MutableStateFlow(false)
@@ -40,12 +43,68 @@ object HidClient {
     private val _hidProfileAvailable = MutableStateFlow(false)
     val hidProfileAvailable: StateFlow<Boolean> = _hidProfileAvailable.asStateFlow()
 
+    /**
+     * Bind to HidService. Call from MainActivity.onCreate()
+     * Includes debouncing to prevent rapid rebinding cycles
+     */
+    fun bindService(context: Context) {
+        val currentTime = System.currentTimeMillis()
+
+        // Debounce: Prevent binding if already bound or recently attempted
+        if (isBound || isBinding) {
+            Log.d(TAG, "Skipping bind - already bound or binding in progress")
+            return
+        }
+
+        if (currentTime - lastBindTime < BIND_DEBOUNCE_MS) {
+            Log.d(TAG, "Skipping bind - debounce period active")
+            return
+        }
+
+        lastBindTime = currentTime
+        isBinding = true
+
+        val intent = Intent(context, HidService::class.java)
+        context.startForegroundService(intent)
+        val bindSuccess = context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+
+        if (!bindSuccess) {
+            Log.e(TAG, "Failed to bind to HidService")
+            isBinding = false
+        } else {
+            Log.d(TAG, "Binding to HidService")
+        }
+    }
+
+    /**
+     * Unbind from HidService. Call from MainActivity.onDestroy()
+     */
+    fun unbindService(context: Context) {
+        if (!isBound && !isBinding) {
+            Log.d(TAG, "Not bound, skipping unbind")
+            return
+        }
+
+        try {
+            context.unbindService(serviceConnection)
+            isBound = false
+            isBinding = false
+            hidService = null
+            Log.d(TAG, "Unbound from HidService")
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Service not registered during unbind", e)
+            isBound = false
+            isBinding = false
+        }
+    }
+
     // Service connection callbacks
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             val localBinder = binder as? HidService.LocalBinder
             hidService = localBinder?.getService()
             isBound = true
+            isBinding = false
             _isServiceReady.value = hidService?.isReady() ?: false
             Log.d(TAG, "HidService bound successfully")
         }
@@ -53,31 +112,10 @@ object HidClient {
         override fun onServiceDisconnected(name: ComponentName?) {
             hidService = null
             isBound = false
+            isBinding = false
             _isServiceReady.value = false
             _isConnected.value = false
-            Log.d(TAG, "HidService unbound")
-        }
-    }
-
-    /**
-     * Bind to HidService. Call from MainActivity.onCreate()
-     */
-    fun bindService(context: Context) {
-        val intent = Intent(context, HidService::class.java)
-        context.startForegroundService(intent)
-        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-        Log.d(TAG, "Binding to HidService")
-    }
-
-    /**
-     * Unbind from HidService. Call from MainActivity.onDestroy()
-     */
-    fun unbindService(context: Context) {
-        if (isBound) {
-            context.unbindService(serviceConnection)
-            isBound = false
-            hidService = null
-            Log.d(TAG, "Unbound from HidService")
+            Log.d(TAG, "HidService disconnected")
         }
     }
 
@@ -104,12 +142,40 @@ object HidClient {
 
     // Helper to get service safely
     private fun getService(): HidServiceApi? {
-        return hidService?.takeIf { isBound && it.isReady() }
+        val service = hidService
+        
+        if (service == null) {
+            Log.w(TAG, "Service is null - not bound")
+            return null
+        }
+        
+        if (!isBound) {
+            Log.w(TAG, "Service not bound")
+            return null
+        }
+        
+        if (!service.isReady()) {
+            Log.w(TAG, "Service not ready")
+            return null
+        }
+        
+        return service
     }
 
     // Connection management
     fun connectToDevice(device: BluetoothDevice): Boolean {
-        return getService()?.connectToDevice(device) ?: false
+        val service = getService()
+        if (service == null) {
+            Log.e(TAG, "❌ Cannot connect: Service not available")
+            setConnectionError("HID Service not ready")
+            return false
+        }
+        
+        val success = service.connectToDevice(device)
+        if (!success) {
+            Log.e(TAG, "❌ Connection attempt failed")
+        }
+        return success
     }
 
     // ==================== MOUSE OPERATIONS ====================
@@ -198,6 +264,11 @@ object HidClient {
 
     fun sendDpadCenter(): Boolean {
         return getService()?.sendDpadCenter() ?: false
+    }
+
+    // ESC key for back functionality
+    fun sendEscape(): Boolean {
+        return getService()?.sendEscape() ?: false
     }
 
     // ==================== RAW HID ====================

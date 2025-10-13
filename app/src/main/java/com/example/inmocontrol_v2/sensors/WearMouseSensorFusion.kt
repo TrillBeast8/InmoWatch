@@ -5,6 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.util.Log
 import kotlin.math.*
 
 /**
@@ -14,11 +15,13 @@ import kotlin.math.*
 class WearMouseSensorFusion(context: Context) {
 
     companion object {
+        private const val TAG = "WearMouseSensor"
         private const val CURSOR_SPEED = 1024.0 / (PI / 4)
         private const val STABILIZE_BIAS = 16.0
         private const val DATA_RATE_US = 11250
+        private const val MIN_MOVEMENT_THRESHOLD = 0.5f  // RESTORED: Original value for responsiveness
 
-        // Pre-computed constants for performance
+        // Pre-computed constants
         private const val CURSOR_SPEED_FLOAT = CURSOR_SPEED.toFloat()
         private const val STABILIZE_BIAS_FLOAT = STABILIZE_BIAS.toFloat()
         private const val PI_HALF = (PI / 2).toFloat()
@@ -27,31 +30,26 @@ class WearMouseSensorFusion(context: Context) {
 
     enum class HandMode { LEFT, CENTER, RIGHT }
 
-    // Inline class for better performance
-    @JvmInline
-    value class MouseMovement(private val packed: Long) {
-        constructor(deltaX: Float, deltaY: Float, deltaWheel: Float = 0f) : this(
-            (deltaX.toBits().toLong() shl 32) or
-            (deltaY.toBits().toLong() and 0xFFFFFFFFL)
-        )
-
-        val deltaX: Float get() = Float.fromBits((packed shr 32).toInt())
-        val deltaY: Float get() = Float.fromBits((packed and 0xFFFFFFFFL).toInt())
-    }
+    // Simple data class - no unnecessary inline optimization
+    data class MouseMovement(
+        val deltaX: Float,
+        val deltaY: Float,
+        val deltaWheel: Float = 0f
+    )
 
     // Cached sensor manager and sensors
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val preferredSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
         ?: sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
 
-    // State variables with better precision
-    @Volatile private var yaw = 0f
-    @Volatile private var pitch = 0f
-    @Volatile private var dYaw = 0f
-    @Volatile private var dPitch = 0f
-    @Volatile private var dWheel = 0f
-    @Volatile private var firstRead = true
-    @Volatile private var isActive = false
+    // State variables - no volatile needed for single-threaded sensor callbacks
+    private var yaw = 0f
+    private var pitch = 0f
+    private var dYaw = 0f
+    private var dPitch = 0f
+    private var dWheel = 0f
+    private var firstRead = true
+    private var isActive = false
 
     // Optimized settings
     private var handMode = HandMode.CENTER
@@ -81,7 +79,10 @@ class WearMouseSensorFusion(context: Context) {
 
         preferredSensor?.let { sensor ->
             isActive = true
-            sensorManager.registerListener(sensorListener, sensor, DATA_RATE_US)
+            val registered = sensorManager.registerListener(sensorListener, sensor, DATA_RATE_US)
+            Log.d(TAG, "✅ Sensor registered: $registered, sensor: ${sensor.name}")
+        } ?: run {
+            Log.e(TAG, "❌ No rotation sensor available!")
         }
     }
 
@@ -115,6 +116,7 @@ class WearMouseSensorFusion(context: Context) {
             yaw = newYaw
             pitch = newPitch
             firstRead = false
+            Log.d(TAG, "First read - baseline set: yaw=$newYaw, pitch=$newPitch")
             return
         }
 
@@ -153,8 +155,9 @@ class WearMouseSensorFusion(context: Context) {
         // Apply lefty correction if needed
         val adjustedX = if (lefty) -finalX else finalX
 
-        // Send movement only if significant enough to reduce unnecessary calls
-        if (abs(adjustedX) > 0.5f || abs(finalY) > 0.5f) {
+        // Send movement only if significant enough to reduce jitter and unnecessary calls
+        if (abs(adjustedX) > MIN_MOVEMENT_THRESHOLD || abs(finalY) > MIN_MOVEMENT_THRESHOLD) {
+            Log.v(TAG, "Movement: deltaX=$adjustedX, deltaY=$finalY")
             onMovement?.invoke(MouseMovement(adjustedX, finalY))
         }
     }

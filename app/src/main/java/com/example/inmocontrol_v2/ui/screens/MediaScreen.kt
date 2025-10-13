@@ -1,306 +1,400 @@
 package com.example.inmocontrol_v2.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.VolumeDown
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.*
+import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.Text as WearText
 import com.example.inmocontrol_v2.hid.HidClient
-import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
+import com.example.inmocontrol_v2.ui.components.QuickLauncher
 import kotlinx.coroutines.delay
+import kotlin.math.atan2
+import kotlin.math.abs
 
 /**
- * Modern Media Control Screen
- * Improved UI with proper volume controls and device output switching
+ * Elegant MediaScreen with seamless circular gesture controls + Bezel/Rotary volume control
+ * Matches the fluid, swift design of MouseScreen and TouchpadScreen
  */
 @Composable
 fun MediaScreen(
     onBack: () -> Unit = {},
-    onScrollPopup: () -> Unit = {},
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {}
+    onNavigateTo: (String) -> Unit = {}
 ) {
-    // State management
+    // Elegant state management
     var isPlaying by remember { mutableStateOf(false) }
-    var currentVolume by remember { mutableStateOf(50) }
-    var pressedButton by remember { mutableStateOf<String?>(null) }
+    var lastAction by remember { mutableStateOf("") }
+    var actionFeedbackVisible by remember { mutableStateOf(false) }
+    var showDpad by remember { mutableStateOf(false) }
+    var showQuickLauncher by remember { mutableStateOf(false) }
 
-    // Use real-time connection state from HidClient
+    // Connection state
     val isConnected by HidClient.isConnected.collectAsState()
     val connectionError by HidClient.connectionError.collectAsState()
 
-    // Auto-clear button feedback after 200ms
-    LaunchedEffect(pressedButton) {
-        if (pressedButton != null) {
-            delay(200)
-            pressedButton = null
+    // Smooth feedback animations with spring physics
+    val feedbackAlpha by animateFloatAsState(
+        targetValue = if (actionFeedbackVisible) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
+
+    val feedbackScale by animateFloatAsState(
+        targetValue = if (actionFeedbackVisible) 1f else 0.8f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
+
+    // Auto-clear feedback - quick and responsive
+    LaunchedEffect(actionFeedbackVisible) {
+        if (actionFeedbackVisible) {
+            delay(500)
+            actionFeedbackVisible = false
         }
     }
 
-    // Media control functions
-    fun handlePlayPause() {
-        if (isConnected) {
-            pressedButton = "PLAY_PAUSE"
+    // Action handler
+    val performAction = remember(isConnected) {
+        { action: String, operation: () -> Unit ->
+            if (isConnected) {
+                operation()
+                lastAction = action
+                actionFeedbackVisible = true
+            }
+        }
+    }
+
+    // Handle circular gesture detection for media controls
+    fun handleCircularGesture(offset: Offset, centerOffset: Offset) {
+        if (!isConnected) return
+
+        val deltaX = offset.x - centerOffset.x
+        val deltaY = offset.y - centerOffset.y
+        val distance = kotlin.math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+        // Center zone = Play/Pause
+        if (distance < 60f) {
             isPlaying = !isPlaying
-            HidClient.playPause()
+            performAction(if (isPlaying) "▶ Play" else "⏸ Pause") { HidClient.playPause() }
+            return
+        }
+
+        // Calculate angle for swipe gestures
+        val angle = Math.toDegrees(atan2(deltaY.toDouble(), deltaX.toDouble())).toFloat()
+
+        // Detect swipe direction (simplified to left/right for prev/next)
+        when {
+            angle >= -45 && angle < 45 -> {
+                // Right swipe = Next Track
+                performAction("Next ⏭") { HidClient.nextTrack() }
+            }
+            angle >= 135 || angle < -135 -> {
+                // Left swipe = Previous Track
+                performAction("⏮ Prev") { HidClient.previousTrack() }
+            }
+            angle >= 45 && angle < 135 -> {
+                // Down swipe = Volume Down
+                performAction("Vol -") { HidClient.volumeDown() }
+            }
+            angle >= -135 && angle < -45 -> {
+                // Up swipe = Volume Up
+                performAction("Vol +") { HidClient.volumeUp() }
+            }
         }
     }
 
-    fun handlePrevious() {
-        if (isConnected) {
-            pressedButton = "PREVIOUS"
-            HidClient.previousTrack()
-        }
-    }
-
-    fun handleNext() {
-        if (isConnected) {
-            pressedButton = "NEXT"
-            HidClient.nextTrack()
-        }
-    }
-
-    fun handleVolumeUp() {
-        if (isConnected) {
-            pressedButton = "VOLUME_UP"
-            currentVolume = (currentVolume + 5).coerceAtMost(100)
-            HidClient.volumeUp()
-        }
-    }
-
-    fun handleVolumeDown() {
-        if (isConnected) {
-            pressedButton = "VOLUME_DOWN"
-            currentVolume = (currentVolume - 5).coerceAtLeast(0)
-            HidClient.volumeDown()
-        }
-    }
+    // Cache colors outside Canvas for performance and to avoid @Composable invocation errors
+    val primaryColor = MaterialTheme.colors.primary
+    val errorColor = MaterialTheme.colors.error
+    val secondaryColor = MaterialTheme.colors.secondary
+    val surfaceColor = MaterialTheme.colors.surface
 
     Scaffold(
         timeText = { TimeText() },
-        modifier = Modifier.detectTwoFingerSwipe(
-            onSwipeLeft = onSwipeLeft,
-            onSwipeRight = onSwipeRight
-        )
+        modifier = Modifier
+            .onRotaryScrollEvent { event ->
+                // Bezel/Rotary input for volume control
+                if (isConnected) {
+                    val delta = event.verticalScrollPixels
+                    if (delta > 0) {
+                        HidClient.volumeUp()
+                        performAction("Vol +") { }
+                    } else if (delta < 0) {
+                        HidClient.volumeDown()
+                        performAction("Vol -") { }
+                    }
+                    true
+                } else {
+                    false
+                }
+            }
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Full-screen circular touch area for seamless gesture control
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            handleCircularGesture(offset, center)
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        var dragStartOffset = Offset.Zero
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                dragStartOffset = offset
+                            },
+                            onDragEnd = {
+                                // Process swipe on drag end
+                                val center = Offset(size.width / 2f, size.height / 2f)
+                                val deltaX = dragStartOffset.x - center.x
+                                val deltaY = dragStartOffset.y - center.y
+                                
+                                // Detect significant horizontal swipe
+                                if (abs(deltaX) > abs(deltaY) && abs(deltaX) > 50f) {
+                                    if (deltaX > 0) {
+                                        // Swipe right = Next
+                                        performAction("Next ⏭") { HidClient.nextTrack() }
+                                    } else {
+                                        // Swipe left = Previous
+                                        performAction("⏮ Prev") { HidClient.previousTrack() }
+                                    }
+                                }
+                                // Detect significant vertical swipe
+                                else if (abs(deltaY) > abs(deltaX) && abs(deltaY) > 50f) {
+                                    if (deltaY < 0) {
+                                        // Swipe up = Volume Up
+                                        performAction("Vol +") { HidClient.volumeUp() }
+                                    } else {
+                                        // Swipe down = Volume Down
+                                        performAction("Vol -") { HidClient.volumeDown() }
+                                    }
+                                }
+                            }
+                        ) { _, _ -> }
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                // Connection status
-                if (!isConnected) {
-                    WearText(
-                        text = connectionError ?: "Not connected",
-                        style = MaterialTheme.typography.caption1,
-                        color = MaterialTheme.colors.error,
-                        textAlign = TextAlign.Center,
-                        fontSize = 10.sp
+                // Elegant circular guide with subtle presence
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val center = Offset(size.width / 2, size.height / 2)
+                    val radius = size.minDimension * 0.42f
+                    
+                    // Subtle outer ring
+                    drawCircle(
+                        color = if (isConnected) Color.White.copy(alpha = 0.15f)
+                               else Color.Gray.copy(alpha = 0.1f),
+                        radius = radius,
+                        center = center,
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                    
+                    // Inner center circle for play/pause zone
+                    drawCircle(
+                        color = if (isConnected) primaryColor.copy(alpha = 0.2f)
+                               else Color.Gray.copy(alpha = 0.08f),
+                        radius = 60f,
+                        center = center,
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                    
+                    // Directional guides (subtle)
+                    val guideRadius = radius * 0.8f
+                    // Up arrow guide
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.08f),
+                        start = center.copy(y = center.y - guideRadius),
+                        end = center.copy(y = center.y - guideRadius + 15f),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                    // Down arrow guide
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.08f),
+                        start = center.copy(y = center.y + guideRadius),
+                        end = center.copy(y = center.y + guideRadius - 15f),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                    // Left arrow guide
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.08f),
+                        start = center.copy(x = center.x - guideRadius),
+                        end = center.copy(x = center.x - guideRadius + 15f),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                    // Right arrow guide
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.08f),
+                        start = center.copy(x = center.x + guideRadius),
+                        end = center.copy(x = center.x + guideRadius - 15f),
+                        strokeWidth = 1.dp.toPx()
                     )
                 }
-
-                // Media info area - more realistic media control display
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(bottom = 4.dp)
+                
+                // Center play/pause indicator
+                Box(
+                    modifier = Modifier.size(60.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    WearText(
-                        text = "Now Playing",
-                        style = MaterialTheme.typography.caption1,
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
-                        fontSize = 10.sp
-                    )
-                    WearText(
-                        text = "Media Player",
-                        style = MaterialTheme.typography.body2,
-                        color = MaterialTheme.colors.onSurface,
-                        fontSize = 12.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    WearText(
-                        text = if (isPlaying) "♪ Playing" else "⏸ Paused",
-                        style = MaterialTheme.typography.caption1,
-                        color = if (isPlaying) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
-                        fontSize = 9.sp
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = "Play/Pause",
+                        tint = if (isConnected) primaryColor.copy(alpha = 0.6f)
+                               else Color.Gray.copy(alpha = 0.3f),
+                        modifier = Modifier.size(36.dp)
                     )
                 }
-
-                // Main playback controls
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                
+                // Directional labels (elegant arrows)
+                DirectionalMediaLabel("↑", 0f, -100f, "Vol +")
+                DirectionalMediaLabel("↓", 0f, 100f, "Vol -")
+                DirectionalMediaLabel("←", -100f, 0f, "Prev")
+                DirectionalMediaLabel("→", 100f, 0f, "Next")
+                
+                // Action feedback overlay with smooth animations
+                AnimatedVisibility(
+                    visible = actionFeedbackVisible,
+                    enter = fadeIn(tween(100)) + scaleIn(tween(100)),
+                    exit = fadeOut(tween(400))
                 ) {
-                    // Previous track
-                    MediaButton(
-                        icon = Icons.Default.SkipPrevious,
-                        onClick = { handlePrevious() },
-                        enabled = isConnected,
-                        isPressed = pressedButton == "PREVIOUS",
-                        size = 40.dp
-                    )
-
-                    // Play/Pause (larger, center)
-                    MediaButton(
-                        icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        onClick = { handlePlayPause() },
-                        enabled = isConnected,
-                        isPressed = pressedButton == "PLAY_PAUSE",
-                        size = 52.dp,
-                        backgroundColor = MaterialTheme.colors.primary
-                    )
-
-                    // Next track
-                    MediaButton(
-                        icon = Icons.Default.SkipNext,
-                        onClick = { handleNext() },
-                        enabled = isConnected,
-                        isPressed = pressedButton == "NEXT",
-                        size = 40.dp
-                    )
-                }
-
-                // Volume controls with single volume control
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 6.dp)
-                ) {
-                    // Volume down
-                    MediaButton(
-                        icon = Icons.AutoMirrored.Filled.VolumeDown,
-                        onClick = { handleVolumeDown() },
-                        enabled = isConnected && currentVolume > 0,
-                        isPressed = pressedButton == "VOLUME_DOWN",
-                        size = 32.dp
-                    )
-
-                    // Volume display
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.width(50.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .alpha(feedbackAlpha)
+                            .scale(feedbackScale),
+                        contentAlignment = Alignment.Center
                     ) {
-                        WearText(
-                            text = "$currentVolume%",
-                            style = MaterialTheme.typography.caption1,
-                            color = MaterialTheme.colors.onSurface,
-                            fontSize = 11.sp,
-                            textAlign = TextAlign.Center
-                        )
-
-                        // Volume bar
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(3.dp)
-                                .background(
-                                    MaterialTheme.colors.surface,
-                                    CircleShape
-                                )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(currentVolume / 100f)
-                                    .background(
-                                        MaterialTheme.colors.primary,
-                                        CircleShape
-                                    )
+                            Text(
+                                text = lastAction,
+                                style = MaterialTheme.typography.display1,
+                                color = MaterialTheme.colors.secondary,
+                                fontSize = 24.sp,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
-
-                    // Volume up
-                    MediaButton(
-                        icon = Icons.AutoMirrored.Filled.VolumeUp,
-                        onClick = { handleVolumeUp() },
-                        enabled = isConnected && currentVolume < 100,
-                        isPressed = pressedButton == "VOLUME_UP",
-                        size = 32.dp
-                    )
                 }
-
-                // Bottom controls row
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 6.dp)
+                
+                // Connection status
+                AnimatedVisibility(
+                    visible = !isConnected,
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    // Back button
-                    MediaButton(
-                        icon = Icons.AutoMirrored.Filled.ArrowBack,
-                        onClick = onBack,
-                        enabled = true,
-                        isPressed = pressedButton == "BACK",
-                        size = 36.dp
-                    )
-
-                    // Scroll popup button
-                    MediaButton(
-                        icon = Icons.Default.Keyboard,
-                        onClick = onScrollPopup,
-                        enabled = true,
-                        isPressed = pressedButton == "SCROLL",
-                        size = 36.dp
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.offset(y = (-60).dp)
+                    ) {
+                        Text(
+                            text = connectionError ?: "Not Connected",
+                            color = MaterialTheme.colors.error,
+                            style = MaterialTheme.typography.caption1,
+                            textAlign = TextAlign.Center,
+                            fontSize = 10.sp
+                        )
+                    }
                 }
+            }
+
+            // Floating action buttons - bottom
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // D-Pad quick launch
+                Button(
+                    onClick = { showDpad = !showDpad },
+                    modifier = Modifier.size(36.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = if (showDpad) MaterialTheme.colors.primary.copy(alpha = 0.6f)
+                                        else MaterialTheme.colors.surface.copy(alpha = 0.4f)
+                    )
+                ) {
+                    Text("⊞", fontSize = 16.sp)
+                }
+                
+                // Quick Launcher button (replaces X/Back)
+                Button(
+                    onClick = { showQuickLauncher = !showQuickLauncher },
+                    modifier = Modifier.size(36.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = if (showQuickLauncher) MaterialTheme.colors.primary.copy(alpha = 0.6f)
+                                        else MaterialTheme.colors.surface.copy(alpha = 0.4f)
+                    )
+                ) {
+                    Text("⋮", fontSize = 16.sp)
+                }
+            }
+            
+            // Quick Launcher overlay (when toggled)
+            AnimatedVisibility(
+                visible = showQuickLauncher,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                QuickLauncher(
+                    onClose = { showQuickLauncher = false },
+                    onNavigateTo = { route ->
+                        showQuickLauncher = false
+                        onNavigateTo(route)
+                    },
+                    currentScreen = "media"
+                )
             }
         }
     }
 }
 
+/**
+ * Directional media label with hint text
+ */
 @Composable
-private fun MediaButton(
-    icon: ImageVector,
-    onClick: () -> Unit,
-    enabled: Boolean,
-    isPressed: Boolean,
-    size: Dp,
-    backgroundColor: Color = MaterialTheme.colors.surface
-) {
+fun BoxScope.DirectionalMediaLabel(arrow: String, offsetX: Float, offsetY: Float, hint: String) {
     Box(
         modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(
-                if (isPressed) MaterialTheme.colors.secondary
-                else if (enabled) backgroundColor
-                else backgroundColor.copy(alpha = 0.3f)
-            )
-            .clickable(enabled = enabled) { onClick() },
+            .offset(offsetX.dp, offsetY.dp)
+            .size(36.dp)
+            .align(Alignment.Center),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (enabled) {
-                if (backgroundColor == MaterialTheme.colors.primary) Color.White
-                else MaterialTheme.colors.onSurface
-            } else {
-                MaterialTheme.colors.onSurface.copy(alpha = 0.3f)
-            },
-            modifier = Modifier.size(size * 0.6f)
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = arrow,
+                style = MaterialTheme.typography.caption2,
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 20.sp
+            )
+            Text(
+                text = hint,
+                style = MaterialTheme.typography.caption2,
+                color = Color.White.copy(alpha = 0.3f),
+                fontSize = 8.sp
+            )
+        }
     }
 }

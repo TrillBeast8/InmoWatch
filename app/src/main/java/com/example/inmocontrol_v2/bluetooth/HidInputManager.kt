@@ -129,7 +129,11 @@ class HidInputManager(
      * @return true if report sent successfully
      */
     fun sendMouseMovement(deltaX: Float, deltaY: Float): Boolean {
-        val device = currentDevice ?: return false
+        val device = currentDevice
+        if (device == null) {
+            Log.w(TAG, "❌ Cannot send mouse movement - no device connected")
+            return false
+        }
 
         // Clamp to HID spec range
         val clampedX = deltaX.toInt().coerceIn(MIN_MOUSE_DELTA, MAX_MOUSE_DELTA)
@@ -140,6 +144,8 @@ class HidInputManager(
             return true
         }
 
+        Log.d(TAG, "📍 Sending mouse movement: X=$clampedX, Y=$clampedY (original: X=$deltaX, Y=$deltaY)")
+
         val report = createMouseReport(
             left = false,
             right = false,
@@ -149,7 +155,11 @@ class HidInputManager(
             wheel = 0
         )
 
-        return sendReport(device, HidConstants.ID_MOUSE, report)
+        val success = sendReport(device, HidConstants.ID_MOUSE, report)
+        if (!success) {
+            Log.e(TAG, "❌ Failed to send mouse movement report")
+        }
+        return success
     }
 
     /**
@@ -186,8 +196,10 @@ class HidInputManager(
      *
      * This is the key fix for intermittent input failures:
      * 1. Send "press" report immediately
-     * 2. Launch coroutine to send "release" after 20ms delay
+     * 2. Launch coroutine to send "release" after 15ms delay
      * 3. Prevents race conditions and ensures host receives both events
+     *
+     * NOTE: Debouncing removed for mouse clicks to allow rapid clicking
      *
      * @param left Left button state
      * @param right Right button state
@@ -198,15 +210,7 @@ class HidInputManager(
     fun sendMouseClick(left: Boolean, right: Boolean, middle: Boolean): Boolean {
         val device = currentDevice ?: return false
 
-        // Debouncing: prevent rapid duplicate clicks
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastActionTime < HidConstants.DEBOUNCE_DELAY_MS) {
-            Log.d(TAG, "Click debounced (too fast)")
-            return false
-        }
-        lastActionTime = currentTime
-
-        // Send PRESS report
+        // Send PRESS report immediately (no debouncing for mouse clicks)
         val pressReport = createMouseReport(left, right, middle, 0, 0, 0)
         val pressSuccess = sendReport(device, HidConstants.ID_MOUSE, pressReport)
 
@@ -433,6 +437,47 @@ class HidInputManager(
 
     @Suppress("unused") // Used by HidService
     fun mute(): Boolean = sendConsumerControl(HidConstants.USAGE_MUTE)
+
+    /**
+     * Send multiple keys simultaneously (for diagonal D-pad movements).
+     * Used for UP+LEFT, UP+RIGHT, DOWN+LEFT, DOWN+RIGHT.
+     *
+     * @param keyCodes Array of HID scan codes to send together
+     * @return true if press report sent successfully
+     */
+    fun sendKeys(keyCodes: IntArray): Boolean {
+        val device = currentDevice ?: return false
+
+        if (keyCodes.isEmpty() || keyCodes.size > 6) {
+            Log.e(TAG, "Invalid key count: ${keyCodes.size} (max 6)")
+            return false
+        }
+
+        // Convert to ByteArray
+        val keys = ByteArray(keyCodes.size) { keyCodes[it].toByte() }
+
+        // Send PRESS report
+        val pressReport = createKeyboardReport(0, keys)
+        val pressSuccess = sendReport(device, HidConstants.ID_KEYBOARD, pressReport)
+
+        if (!pressSuccess) {
+            Log.e(TAG, "Failed to send multi-key press report")
+            return false
+        }
+
+        // Schedule RELEASE report asynchronously
+        scope.launch {
+            delay(HidConstants.PRESS_RELEASE_DELAY_MS)
+
+            val currentDev = currentDevice
+            if (currentDev != null) {
+                val releaseReport = createKeyboardReport(0, byteArrayOf())
+                sendReport(currentDev, HidConstants.ID_KEYBOARD, releaseReport)
+            }
+        }
+
+        return true
+    }
 
     // ==================== CORE TRANSMISSION ====================
 

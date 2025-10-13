@@ -16,8 +16,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
 import androidx.core.content.ContextCompat
 import androidx.wear.compose.material.Scaffold
 import com.example.inmocontrol_v2.nav.NavRoutes
@@ -48,9 +46,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Request permissions and start service
-        requestBluetoothPermissions()
+        // Enable StrictMode in debug builds to catch performance issues
+        if (BuildConfig.DEBUG) {
+            enableStrictMode()
+        }
 
+        // Defer permission request until after UI is rendered to reduce startup frame skips
         setContent {
             InmoTheme {
                 Scaffold(
@@ -60,14 +61,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        // Request permissions AFTER setContent to avoid blocking UI rendering
+        // This prevents the 238 frame skip issue
+        requestBluetoothPermissions()
     }
 
     override fun onStart() {
         super.onStart()
-        // Bind to HidClient if permissions are granted
-        if (hasBluetoothPermissions()) {
-            HidClient.bindService(this)
-        }
+        // Remove duplicate binding - already handled in onCreate/requestBluetoothPermissions
     }
 
     override fun onDestroy() {
@@ -111,15 +113,34 @@ class MainActivity : ComponentActivity() {
         HidClient.bindService(this)
     }
 
+    private fun enableStrictMode() {
+        android.os.StrictMode.setThreadPolicy(
+            android.os.StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads()
+                .detectDiskWrites()
+                .detectNetwork()
+                .penaltyLog()
+                .build()
+        )
+        android.os.StrictMode.setVmPolicy(
+            android.os.StrictMode.VmPolicy.Builder()
+                .detectLeakedSqlLiteObjects()
+                .detectLeakedClosableObjects()
+                .penaltyLog()
+                .build()
+        )
+    }
+
     @Composable
     private fun AppNavigation() {
         val navController = rememberNavController()
         val context = LocalContext.current
-        val settingsStore = remember { SettingsStore.get(context) }
 
-        // Optimized back button handling
+        // Optimized back button handling - defer settings access until needed
         var lastBackPressTime by remember { mutableLongStateOf(0L) }
-        val remoteBackDoubleClick by settingsStore.remoteBackDoubleClick.collectAsState(initial = false)
+        val remoteBackDoubleClick by remember {
+            SettingsStore.get(context).remoteBackDoubleClick
+        }.collectAsState(initial = false)
 
         val screens = listOf(
             NavRoutes.Mouse,
@@ -184,62 +205,42 @@ class MainActivity : ComponentActivity() {
             composable(NavRoutes.Mouse) {
                 MouseScreen(
                     onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/mouse") },
-                    onSwipeLeft = { navigateLeft(NavRoutes.Mouse) },
-                    onSwipeRight = { navigateRight(NavRoutes.Mouse) }
+                    onNavigateTo = { route -> navController.navigate(route) }
                 )
             }
             composable(NavRoutes.Touchpad) {
                 TouchpadScreen(
                     onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/touchpad") },
-                    onSwipeLeft = { navigateLeft(NavRoutes.Touchpad) },
-                    onSwipeRight = { navigateRight(NavRoutes.Touchpad) }
+                    onNavigateTo = { route -> navController.navigate(route) }
                 )
             }
             composable(NavRoutes.Keyboard) {
                 KeyboardScreen(
                     onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/keyboard") },
-                    onSwipeLeft = { navigateLeft(NavRoutes.Keyboard) },
-                    onSwipeRight = { navigateRight(NavRoutes.Keyboard) }
+                    onNavigateTo = { route -> navController.navigate(route) }
                 )
             }
             composable(NavRoutes.Media) {
                 MediaScreen(
                     onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/media") },
-                    onSwipeLeft = { navigateLeft(NavRoutes.Media) },
-                    onSwipeRight = { navigateRight(NavRoutes.Media) }
+                    onNavigateTo = { route -> navController.navigate(route) }
                 )
             }
             composable(NavRoutes.DPad) {
                 DpadScreen(
                     onBack = { navController.popBackStack() },
-                    onScrollPopup = { navController.navigate("scrollPopup/dpad") },
-                    onSwipeLeft = { navigateLeft(NavRoutes.DPad) },
-                    onSwipeRight = { navigateRight(NavRoutes.DPad) }
+                    onNavigateTo = { route -> navController.navigate(route) },
+                    onScrollPopup = { /* Scroll mode is built into D-pad screen */ }
                 )
             }
             composable(NavRoutes.Settings) {
                 SettingsScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigateToMouseCalibration = { navController.navigate(NavRoutes.MouseCalibration) },
-                    onSwipeLeft = { navigateLeft(NavRoutes.Settings) },
-                    onSwipeRight = { navigateRight(NavRoutes.Settings) }
+                    onNavigateToMouseCalibration = { navController.navigate(NavRoutes.MouseCalibration) }
                 )
             }
             composable(NavRoutes.MouseCalibration) {
                 MouseCalibrationScreen(
-                    onBack = { navController.popBackStack() }
-                )
-            }
-            composable(
-                route = "scrollPopup/{parent}",
-                arguments = listOf(navArgument("parent") { type = NavType.StringType })
-            ) { backStackEntry ->
-                ScrollPopupScreen(
-                    parentScreen = backStackEntry.arguments?.getString("parent") ?: "unknown",
                     onBack = { navController.popBackStack() }
                 )
             }

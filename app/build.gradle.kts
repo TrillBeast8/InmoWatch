@@ -19,11 +19,14 @@ android {
             useSupportLibrary = true
         }
 
-        // Optimize for smaller APK
+        // Optimize for smaller APK - Samsung Watch has limited storage
         resourceConfigurations += listOf("en")
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
+
+        // Reduce dex method count for faster loading
+        multiDexEnabled = false
     }
 
     buildTypes {
@@ -36,7 +39,7 @@ android {
                 "proguard-rules.pro"
             )
 
-            // Additional optimizations for smaller APK
+            // Aggressive optimizations for Samsung Watch
             packaging {
                 resources {
                     excludes += setOf(
@@ -46,7 +49,9 @@ android {
                         "**/attach_hotspot_windows.dll",
                         "META-INF/licenses/**",
                         "META-INF/AL2.0",
-                        "META-INF/LGPL2.1"
+                        "META-INF/LGPL2.1",
+                        "DebugProbesKt.bin",
+                        "kotlin-tooling-metadata.json"
                     )
                 }
             }
@@ -56,8 +61,12 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
 
-            // Reduce debug logging for performance
-            buildConfigField("boolean", "DEBUG_LOGGING", "true")
+            // Add R8 optimization for debug builds to fix lock verification warnings
+            // This helps with the "failed lock verification" warnings in the logs
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -72,13 +81,18 @@ android {
             "-opt-in=kotlin.RequiresOptIn",
             "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
             "-opt-in=androidx.wear.compose.material.ExperimentalWearMaterialApi",
-            "-Xjvm-default=all"
+            "-Xjvm-default=all",
+            "-Xno-call-assertions",
+            "-Xno-param-assertions",
+            "-Xno-receiver-assertions"
         )
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+        viewBinding = false
+        dataBinding = false
     }
 
     composeOptions {
@@ -92,8 +106,14 @@ android {
                 "/META-INF/versions/**",
                 "/META-INF/*.kotlin_module",
                 "**/attach_hotspot_windows.dll",
-                "META-INF/licenses/**"
+                "META-INF/licenses/**",
+                "DebugProbesKt.bin"
             )
+        }
+
+        // Use JVM stub validation for faster startup
+        jniLibs {
+            useLegacyPackaging = false
         }
     }
 

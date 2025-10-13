@@ -1,310 +1,392 @@
 package com.example.inmocontrol_v2.ui.screens
 
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.ButtonDefaults
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text as WearText
-import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.*
 import com.example.inmocontrol_v2.hid.HidClient
-import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
+import com.example.inmocontrol_v2.ui.components.QuickLauncher
 import kotlinx.coroutines.delay
 
+/**
+ * Elegant button-based D-pad with seamless, reliable UI for Wear OS
+ * No gesture detection - just clean, responsive buttons arranged in circular pattern
+ */
 @Composable
 fun DpadScreen(
     onBack: () -> Unit = {},
-    onScrollPopup: () -> Unit = {},
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {}
+    onNavigateTo: (String) -> Unit = {},
+    onScrollPopup: () -> Unit = {}
 ) {
-    var pressedButton by remember { mutableStateOf<String?>(null) }
     var isScrollMode by remember { mutableStateOf(false) }
+    var lastAction by remember { mutableStateOf("") }
+    var showFeedback by remember { mutableStateOf(false) }
+    var showQuickLauncher by remember { mutableStateOf(false) }
 
-    // Use real-time connection state from HidClient
     val isConnected by HidClient.isConnected.collectAsState()
     val connectionError by HidClient.connectionError.collectAsState()
 
-    // Auto-clear feedback after 150ms
-    LaunchedEffect(pressedButton) {
-        if (pressedButton != null) {
-            delay(150)
-            pressedButton = null
+    // Smooth feedback animations
+    val feedbackAlpha by animateFloatAsState(
+        targetValue = if (showFeedback) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
+
+    val feedbackScale by animateFloatAsState(
+        targetValue = if (showFeedback) 1f else 0.8f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
+
+    // Auto-clear feedback
+    LaunchedEffect(showFeedback) {
+        if (showFeedback) {
+            delay(400)
+            showFeedback = false
         }
     }
 
-    // Handle center button - single click for confirm/select, double click for right-click
-    fun handleCenterButtonClick() {
-        if (!isConnected) return
-        pressedButton = "CENTER"
-
-        if (isScrollMode) {
-            HidClient.sendLeftClick() // Left click in scroll mode
-        } else {
-            HidClient.sendDpadCenter() // Confirm/select in D-pad mode (KEYCODE_DPAD_CENTER)
-        }
-    }
-
-    // Handle center button double-click for right-click/context menu
-    fun handleCenterButtonDoubleClick() {
-        if (!isConnected) return
-        pressedButton = "CENTER"
-        HidClient.sendRightClick() // Right click for context menu in both modes
-    }
-
-    fun onButtonPress(buttonName: String, direction: Int) {
-        if (isConnected) {
-            pressedButton = buttonName
-            if (isScrollMode) {
-                // Scroll mode - only UP, DOWN, LEFT, RIGHT work for scrolling
-                when (direction) {
-                    0 -> HidClient.sendMouseScroll(0f, -3f) // UP
-                    1 -> HidClient.sendMouseScroll(0f, 3f)  // DOWN
-                    2 -> HidClient.sendMouseScroll(-3f, 0f) // LEFT
-                    3 -> HidClient.sendMouseScroll(3f, 0f)  // RIGHT
-                }
-            } else {
-                // Normal 8-way D-pad mode with corrected direction mapping
-                HidClient.dpad(direction)
+    // Action handler
+    val handleAction = remember(isConnected, isScrollMode) {
+        { direction: String, action: () -> Unit ->
+            if (isConnected) {
+                action()
+                lastAction = direction
+                showFeedback = true
             }
         }
     }
 
     Scaffold(
-        timeText = { TimeText() },
-        modifier = Modifier.detectTwoFingerSwipe(
-            onSwipeLeft = onSwipeLeft,
-            onSwipeRight = onSwipeRight
-        )
+        timeText = { TimeText() }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Simple mode indicator
-            WearText(
-                text = if (isScrollMode) "Scroll Mode" else "D-Pad Mode",
-                style = MaterialTheme.typography.body2,
-                color = MaterialTheme.colors.primary,
-                textAlign = TextAlign.Center,
-                fontSize = 14.sp
-            )
-
-            // Connection status
-            if (!isConnected) {
-                WearText(
-                    text = connectionError ?: "Not connected",
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Main D-pad layout
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Mode indicator
+                Text(
+                    text = if (isScrollMode) "Scroll Mode" else "D-Pad Mode",
                     style = MaterialTheme.typography.caption1,
-                    color = MaterialTheme.colors.error,
+                    color = MaterialTheme.colors.primary,
+                    fontSize = 11.sp,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
-            }
 
-            // 8-way D-pad layout
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+                Spacer(modifier = Modifier.height(8.dp))
+
                 // Top row: UP-LEFT, UP, UP-RIGHT
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // UP-LEFT (7)
-                    Button(
-                        onClick = { if (!isScrollMode) onButtonPress("UP_LEFT", 7) },
-                        modifier = Modifier.size(36.dp),
-                        enabled = isConnected && !isScrollMode,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (pressedButton == "UP_LEFT") MaterialTheme.colors.secondary
-                            else if (isScrollMode) MaterialTheme.colors.surface.copy(alpha = 0.3f)
-                            else MaterialTheme.colors.primary
+                    // UP-LEFT (diagonal)
+                    if (!isScrollMode) {
+                        DpadButton(
+                            text = "↖",
+                            onClick = { handleAction("↖") { HidClient.dpad(7) } },
+                            enabled = isConnected && !isScrollMode,
+                            size = 32.dp
                         )
-                    ) {
-                        WearText("↖", fontSize = 12.sp)
+                    } else {
+                        Spacer(modifier = Modifier.size(32.dp))
                     }
 
-                    // UP (0)
-                    Button(
-                        onClick = { onButtonPress("UP", 0) },
-                        modifier = Modifier.size(36.dp),
+                    // UP
+                    DpadButton(
+                        text = "↑",
+                        onClick = {
+                            handleAction(if (isScrollMode) "Scroll ↑" else "↑") {
+                                if (isScrollMode) HidClient.sendMouseScroll(0f, -3f)
+                                else HidClient.dpad(0)
+                            }
+                        },
                         enabled = isConnected,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (pressedButton == "UP") MaterialTheme.colors.secondary
-                            else MaterialTheme.colors.primary
-                        )
-                    ) {
-                        WearText("↑", fontSize = 14.sp)
-                    }
+                        size = 40.dp
+                    )
 
-                    // UP-RIGHT (8)
-                    Button(
-                        onClick = { if (!isScrollMode) onButtonPress("UP_RIGHT", 8) },
-                        modifier = Modifier.size(36.dp),
-                        enabled = isConnected && !isScrollMode,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (pressedButton == "UP_RIGHT") MaterialTheme.colors.secondary
-                            else if (isScrollMode) MaterialTheme.colors.surface.copy(alpha = 0.3f)
-                            else MaterialTheme.colors.primary
+                    // UP-RIGHT (diagonal)
+                    if (!isScrollMode) {
+                        DpadButton(
+                            text = "↗",
+                            onClick = { handleAction("↗") { HidClient.dpad(8) } },
+                            enabled = isConnected && !isScrollMode,
+                            size = 32.dp
                         )
-                    ) {
-                        WearText("↗", fontSize = 12.sp)
+                    } else {
+                        Spacer(modifier = Modifier.size(32.dp))
                     }
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Middle row: LEFT, CENTER, RIGHT
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // LEFT (2)
-                    Button(
-                        onClick = { onButtonPress("LEFT", 2) },
-                        modifier = Modifier.size(36.dp),
+                    // LEFT
+                    DpadButton(
+                        text = "←",
+                        onClick = {
+                            handleAction(if (isScrollMode) "Scroll ←" else "←") {
+                                if (isScrollMode) HidClient.sendMouseScroll(-3f, 0f)
+                                else HidClient.dpad(2)
+                            }
+                        },
                         enabled = isConnected,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (pressedButton == "LEFT") MaterialTheme.colors.secondary
-                            else MaterialTheme.colors.primary
-                        )
-                    ) {
-                        WearText("←", fontSize = 14.sp)
-                    }
+                        size = 40.dp
+                    )
 
-                    // CENTER (OK/Enter) - Simple click for confirm, double-click for right-click
-                    Button(
-                        onClick = { handleCenterButtonClick() },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onDoubleTap = { handleCenterButtonDoubleClick() }
-                                )
-                            },
+                    // CENTER (OK/Select or Click)
+                    DpadButton(
+                        text = "●",
+                        onClick = {
+                            handleAction(if (isScrollMode) "Click" else "OK") {
+                                if (isScrollMode) HidClient.sendLeftClick()
+                                else HidClient.sendDpadCenter()
+                            }
+                        },
                         enabled = isConnected,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (pressedButton == "CENTER") MaterialTheme.colors.secondary
-                            else MaterialTheme.colors.primary
-                        )
-                    ) {
-                        WearText("●", fontSize = 14.sp)
-                    }
+                        size = 44.dp,
+                        primary = true
+                    )
 
-                    // RIGHT (3)
-                    Button(
-                        onClick = { onButtonPress("RIGHT", 3) },
-                        modifier = Modifier.size(36.dp),
+                    // RIGHT
+                    DpadButton(
+                        text = "→",
+                        onClick = {
+                            handleAction(if (isScrollMode) "Scroll →" else "→") {
+                                if (isScrollMode) HidClient.sendMouseScroll(3f, 0f)
+                                else HidClient.dpad(3)
+                            }
+                        },
                         enabled = isConnected,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (pressedButton == "RIGHT") MaterialTheme.colors.secondary
-                            else MaterialTheme.colors.primary
-                        )
-                    ) {
-                        WearText("→", fontSize = 14.sp)
-                    }
+                        size = 40.dp
+                    )
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Bottom row: DOWN-LEFT, DOWN, DOWN-RIGHT
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // DOWN-LEFT (5)
-                    Button(
-                        onClick = { if (!isScrollMode) onButtonPress("DOWN_LEFT", 5) },
-                        modifier = Modifier.size(36.dp),
-                        enabled = isConnected && !isScrollMode,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (pressedButton == "DOWN_LEFT") MaterialTheme.colors.secondary
-                            else if (isScrollMode) MaterialTheme.colors.surface.copy(alpha = 0.3f)
-                            else MaterialTheme.colors.primary
+                    // DOWN-LEFT (diagonal)
+                    if (!isScrollMode) {
+                        DpadButton(
+                            text = "↙",
+                            onClick = { handleAction("↙") { HidClient.dpad(5) } },
+                            enabled = isConnected && !isScrollMode,
+                            size = 32.dp
                         )
-                    ) {
-                        WearText("↙", fontSize = 12.sp)
+                    } else {
+                        Spacer(modifier = Modifier.size(32.dp))
                     }
 
-                    // DOWN (1)
-                    Button(
-                        onClick = { onButtonPress("DOWN", 1) },
-                        modifier = Modifier.size(36.dp),
+                    // DOWN
+                    DpadButton(
+                        text = "↓",
+                        onClick = {
+                            handleAction(if (isScrollMode) "Scroll ↓" else "↓") {
+                                if (isScrollMode) HidClient.sendMouseScroll(0f, 3f)
+                                else HidClient.dpad(1)
+                            }
+                        },
                         enabled = isConnected,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (pressedButton == "DOWN") MaterialTheme.colors.secondary
-                            else MaterialTheme.colors.primary
-                        )
-                    ) {
-                        WearText("↓", fontSize = 14.sp)
-                    }
+                        size = 40.dp
+                    )
 
-                    // DOWN-RIGHT (6)
-                    Button(
-                        onClick = { if (!isScrollMode) onButtonPress("DOWN_RIGHT", 6) },
-                        modifier = Modifier.size(36.dp),
-                        enabled = isConnected && !isScrollMode,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (pressedButton == "DOWN_RIGHT") MaterialTheme.colors.secondary
-                            else if (isScrollMode) MaterialTheme.colors.surface.copy(alpha = 0.3f)
-                            else MaterialTheme.colors.primary
+                    // DOWN-RIGHT (diagonal)
+                    if (!isScrollMode) {
+                        DpadButton(
+                            text = "↘",
+                            onClick = { handleAction("↘") { HidClient.dpad(6) } },
+                            enabled = isConnected && !isScrollMode,
+                            size = 32.dp
                         )
+                    } else {
+                        Spacer(modifier = Modifier.size(32.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Mode toggle and ESC button row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Mode toggle chip
+                    Chip(
+                        onClick = { isScrollMode = !isScrollMode },
+                        label = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (isScrollMode) Icons.Default.SwapVert else Icons.Default.Apps,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = if (isScrollMode) "Scroll" else "D-Pad",
+                                    fontSize = 11.sp
+                                )
+                            }
+                        },
+                        modifier = Modifier.height(32.dp),
+                        colors = ChipDefaults.chipColors(
+                            backgroundColor = if (isScrollMode)
+                                MaterialTheme.colors.secondary.copy(alpha = 0.3f)
+                            else MaterialTheme.colors.primary.copy(alpha = 0.3f)
+                        )
+                    )
+
+                    // ESC button
+                    Button(
+                        onClick = {
+                            handleAction("ESC") {
+                                HidClient.sendEscape()
+                            }
+                        },
+                        enabled = isConnected,
+                        modifier = Modifier.size(32.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = MaterialTheme.colors.error.copy(alpha = 0.4f)
+                        ),
+                        shape = CircleShape
                     ) {
-                        WearText("↘", fontSize = 12.sp)
+                        Text("⎋", fontSize = 14.sp)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Control buttons
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Action feedback overlay
+            AnimatedVisibility(
+                visible = showFeedback,
+                enter = fadeIn(tween(100)) + scaleIn(tween(100)),
+                exit = fadeOut(tween(300))
             ) {
-                // Mode toggle
-                Button(
-                    onClick = { isScrollMode = !isScrollMode },
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = if (isScrollMode) MaterialTheme.colors.secondary else MaterialTheme.colors.surface
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(feedbackAlpha)
+                        .scale(feedbackScale),
+                    contentAlignment = Alignment.Center
                 ) {
-                    WearText(
-                        text = if (isScrollMode) "D-Pad" else "Scroll",
+                    Text(
+                        text = lastAction,
+                        style = MaterialTheme.typography.display1,
+                        color = MaterialTheme.colors.secondary,
+                        fontSize = 28.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // Connection error
+            AnimatedVisibility(
+                visible = !isConnected,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 24.dp)
+                ) {
+                    Text(
+                        text = connectionError ?: "Not Connected",
+                        color = MaterialTheme.colors.error,
+                        style = MaterialTheme.typography.caption1,
                         fontSize = 10.sp
                     )
                 }
+            }
 
-                // Scroll popup button
-                Button(
-                    onClick = onScrollPopup,
-                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface)
-                ) {
-                    WearText("Scroll", fontSize = 10.sp)
-                }
+            // Quick Launcher button
+            Button(
+                onClick = { showQuickLauncher = !showQuickLauncher },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 12.dp)
+                    .size(36.dp),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = if (showQuickLauncher) MaterialTheme.colors.primary.copy(alpha = 0.6f)
+                                    else MaterialTheme.colors.surface.copy(alpha = 0.4f)
+                )
+            ) {
+                Text("⋮", fontSize = 16.sp)
+            }
 
-                // Back button
-                Button(
-                    onClick = onBack,
-                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface)
-                ) {
-                    WearText("Back", fontSize = 10.sp)
-                }
+            // Quick Launcher overlay
+            AnimatedVisibility(
+                visible = showQuickLauncher,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                QuickLauncher(
+                    onClose = { showQuickLauncher = false },
+                    onNavigateTo = { route ->
+                        showQuickLauncher = false
+                        onNavigateTo(route)
+                    },
+                    currentScreen = "dpad"
+                )
             }
         }
     }
 }
 
-@Preview(device = "id:wearos_small_round", showSystemUi = true)
+/**
+ * Clean D-pad button component
+ */
 @Composable
-fun DpadScreenPreview() {
-    DpadScreen()
+fun DpadButton(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    size: androidx.compose.ui.unit.Dp,
+    primary: Boolean = false
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(size),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = when {
+                primary -> MaterialTheme.colors.primary.copy(alpha = 0.5f)
+                enabled -> MaterialTheme.colors.surface.copy(alpha = 0.4f)
+                else -> MaterialTheme.colors.surface.copy(alpha = 0.15f)
+            },
+            disabledBackgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.1f)
+        ),
+        shape = CircleShape
+    ) {
+        Text(
+            text = text,
+            fontSize = (size.value * 0.5f).sp,
+            color = if (enabled) Color.White else Color.Gray.copy(alpha = 0.3f)
+        )
+    }
 }

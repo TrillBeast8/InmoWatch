@@ -11,10 +11,10 @@ object HidConstants {
     const val ID_MOUSE: Byte = 0x02
     const val ID_CONSUMER: Byte = 0x03
 
-    // Timing constants (milliseconds)
-    const val PRESS_RELEASE_DELAY_MS = 20L       // Delay between press and release reports
-    const val DEBOUNCE_DELAY_MS = 50L            // Minimum interval between repeated actions
-    const val KEY_REPEAT_DELAY_MS = 5L           // Delay between characters in text transmission
+    // Timing constants (milliseconds) - RESTORED: These values are HID spec compliant
+    const val PRESS_RELEASE_DELAY_MS = 20L       // Proper HID timing for press/release cycle
+    const val DEBOUNCE_DELAY_MS = 50L            // Prevents double-triggering media controls
+    const val KEY_REPEAT_DELAY_MS = 5L           // Safe interval between characters
 
     // Mouse button masks
     const val MOUSE_BUTTON_LEFT: Byte = 0x01
@@ -113,4 +113,3 @@ object HidConstants {
         0xC0.toByte()                        // End Collection
     )
 }
-

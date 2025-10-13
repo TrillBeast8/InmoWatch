@@ -43,6 +43,9 @@ interface HidServiceApi {
     fun sendDpadRight(): Boolean
     fun sendDpadCenter(): Boolean
 
+    // ESC key for back functionality
+    fun sendEscape(): Boolean
+
     // Raw HID
     fun sendRawInput(data: ByteArray): Boolean
 }

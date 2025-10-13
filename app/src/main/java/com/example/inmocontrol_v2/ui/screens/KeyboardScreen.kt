@@ -2,16 +2,16 @@ package com.example.inmocontrol_v2.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,41 +19,33 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.*
 import com.example.inmocontrol_v2.data.SettingsStore
 import com.example.inmocontrol_v2.hid.HidClient
-import com.example.inmocontrol_v2.ui.gestures.detectTwoFingerSwipe
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Optimized KeyboardScreen with improved performance and memory efficiency
- * Fixed to use only Wear Compose components
+ * KeyboardScreen - System keyboard with HID transmission
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun KeyboardScreen(
     onBack: () -> Unit = {},
-    onScrollPopup: () -> Unit = {},
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {}
+    @Suppress("UNUSED_PARAMETER") onNavigateTo: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val settingsStore = remember { SettingsStore.get(context) }
     val scope = rememberCoroutineScope()
 
-    // Optimized state management with reduced recomposition
-    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+    // Simple string-based state management
+    var textBuffer by remember { mutableStateOf("") }
     var lastSentText by remember { mutableStateOf("") }
     var showSentFeedback by remember { mutableStateOf(false) }
 
-    // Cached focus and keyboard controller
-    val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
-    // Optimized state collection with distinctUntilChanged
     val isConnected by HidClient.isConnected.collectAsState()
     val connectionError by HidClient.connectionError.collectAsState()
     val isRealtimeMode by settingsStore.realtimeKeyboard.collectAsState(initial = false)
 
-    // Optimized feedback timer
+    // Auto-clear feedback
     LaunchedEffect(showSentFeedback) {
         if (showSentFeedback) {
             delay(2000)
@@ -61,11 +53,10 @@ fun KeyboardScreen(
         }
     }
 
-    // Cached character mapping for better performance
+    // Character to HID scan code mapping
     val charToKeyMap = remember {
         mapOf(
             ' ' to (0x2C to 0), '\n' to (0x28 to 0), '\t' to (0x2B to 0),
-            // Letters a-z
             'a' to (0x04 to 0), 'b' to (0x05 to 0), 'c' to (0x06 to 0), 'd' to (0x07 to 0),
             'e' to (0x08 to 0), 'f' to (0x09 to 0), 'g' to (0x0A to 0), 'h' to (0x0B to 0),
             'i' to (0x0C to 0), 'j' to (0x0D to 0), 'k' to (0x0E to 0), 'l' to (0x0F to 0),
@@ -73,7 +64,6 @@ fun KeyboardScreen(
             'q' to (0x14 to 0), 'r' to (0x15 to 0), 's' to (0x16 to 0), 't' to (0x17 to 0),
             'u' to (0x18 to 0), 'v' to (0x19 to 0), 'w' to (0x1A to 0), 'x' to (0x1B to 0),
             'y' to (0x1C to 0), 'z' to (0x1D to 0),
-            // Capital letters A-Z
             'A' to (0x04 to 0x02), 'B' to (0x05 to 0x02), 'C' to (0x06 to 0x02), 'D' to (0x07 to 0x02),
             'E' to (0x08 to 0x02), 'F' to (0x09 to 0x02), 'G' to (0x0A to 0x02), 'H' to (0x0B to 0x02),
             'I' to (0x0C to 0x02), 'J' to (0x0D to 0x02), 'K' to (0x0E to 0x02), 'L' to (0x0F to 0x02),
@@ -81,74 +71,62 @@ fun KeyboardScreen(
             'Q' to (0x14 to 0x02), 'R' to (0x15 to 0x02), 'S' to (0x16 to 0x02), 'T' to (0x17 to 0x02),
             'U' to (0x18 to 0x02), 'V' to (0x19 to 0x02), 'W' to (0x1A to 0x02), 'X' to (0x1B to 0x02),
             'Y' to (0x1C to 0x02), 'Z' to (0x1D to 0x02),
-            // Numbers 0-9
             '1' to (0x1E to 0), '2' to (0x1F to 0), '3' to (0x20 to 0), '4' to (0x21 to 0),
             '5' to (0x22 to 0), '6' to (0x23 to 0), '7' to (0x24 to 0), '8' to (0x25 to 0),
             '9' to (0x26 to 0), '0' to (0x27 to 0),
-            // Common punctuation
             '.' to (0x37 to 0), ',' to (0x36 to 0), '?' to (0x38 to 0x02), '!' to (0x1E to 0x02),
             ';' to (0x33 to 0), ':' to (0x33 to 0x02)
         )
     }
 
-    // Optimized character sending with cached mapping
-    val sendCharacterAsKey = remember {
-        { char: Char ->
+    // Send character as HID key
+    val sendCharacterAsKey: (Char) -> Unit = remember {
+        { char ->
             val (keyCode, modifiers) = charToKeyMap[char] ?: (0x2C to 0)
             HidClient.sendKey(keyCode, modifiers)
-            Unit // Explicitly return Unit to fix the type mismatch
         }
     }
 
-    // Optimized text change handler
-    val handleTextChange = remember {
-        { newValue: TextFieldValue ->
-            val oldText = textFieldValue.text
-            textFieldValue = newValue
-            val currentText = newValue.text
-
-            if (isRealtimeMode && isConnected) {
-                when {
-                    currentText.length < oldText.length -> {
-                        // Handle deletions efficiently
-                        repeat(oldText.length - currentText.length) {
-                            HidClient.sendKey(0x2A) // Backspace
-                        }
-                    }
-                    currentText.length > oldText.length -> {
-                        // Send only new characters
-                        currentText.substring(oldText.length).forEach(sendCharacterAsKey)
-                    }
+    // Handle text changes for realtime mode
+    LaunchedEffect(textBuffer, isRealtimeMode, isConnected) {
+        if (isRealtimeMode && isConnected && textBuffer != lastSentText) {
+            if (textBuffer.length < lastSentText.length) {
+                // Handle backspace
+                repeat(lastSentText.length - textBuffer.length) {
+                    HidClient.sendKey(0x2A)
+                    delay(5)
                 }
-                lastSentText = currentText
+            } else {
+                // Send new characters
+                val newChars = textBuffer.substring(lastSentText.length)
+                newChars.forEach { char ->
+                    sendCharacterAsKey(char)
+                    delay(5)
+                }
             }
+            lastSentText = textBuffer
         }
     }
 
-    // Optimized text sending function
-    val sendText = remember {
-        { text: String ->
+    // Send text function for deferred mode
+    val sendText: (String) -> Unit = remember {
+        { text ->
             if (isConnected && text.isNotEmpty()) {
                 text.forEach { char ->
                     sendCharacterAsKey(char)
-                    Thread.sleep(5) // Reduced delay for better performance
+                    Thread.sleep(5)
                 }
-
                 if (!isRealtimeMode) {
                     lastSentText = text
                     showSentFeedback = true
-                    textFieldValue = TextFieldValue("")
+                    textBuffer = ""
                 }
             }
         }
     }
 
     Scaffold(
-        timeText = { TimeText() },
-        modifier = Modifier.detectTwoFingerSwipe(
-            onSwipeLeft = onSwipeLeft,
-            onSwipeRight = onSwipeRight
-        )
+        timeText = { TimeText() }
     ) {
         ScalingLazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -156,23 +134,17 @@ fun KeyboardScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Optimized clickable title
+            // Title
             item {
-                Button(
-                    onClick = onScrollPopup,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent)
-                ) {
-                    Text(
-                        text = if (isRealtimeMode) "Keyboard-RT" else "Keyboard-D",
-                        style = MaterialTheme.typography.title2,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colors.primary
-                    )
-                }
+                Text(
+                    text = if (isRealtimeMode) "Keyboard-RT" else "Keyboard-D",
+                    style = MaterialTheme.typography.title2,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colors.primary
+                )
             }
 
-            // Connection status - only show when not connected
+            // Connection status
             if (!isConnected) {
                 item {
                     Text(
@@ -185,7 +157,7 @@ fun KeyboardScreen(
                 }
             }
 
-            // Optimized text input section - Fixed to use Wear Compose only
+            // Text input
             item {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -198,14 +170,25 @@ fun KeyboardScreen(
                     )
 
                     BasicTextField(
-                        value = textFieldValue,
-                        onValueChange = handleTextChange,
+                        value = textBuffer,
+                        onValueChange = { textBuffer = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(focusRequester),
                         textStyle = LocalTextStyle.current.copy(
                             color = MaterialTheme.colors.onBackground,
                             textAlign = TextAlign.Center
+                        ),
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            imeAction = ImeAction.Done,
+                            keyboardType = KeyboardType.Text
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                if (textBuffer.isNotEmpty()) {
+                                    sendText(textBuffer)
+                                }
+                            }
                         )
                     )
                 }
@@ -229,11 +212,11 @@ fun KeyboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Send button (deferred mode)
+                    // Send button (deferred mode only)
                     if (!isRealtimeMode) {
                         Button(
-                            onClick = { sendText(textFieldValue.text) },
-                            enabled = isConnected && textFieldValue.text.isNotEmpty(),
+                            onClick = { sendText(textBuffer) },
+                            enabled = isConnected && textBuffer.isNotEmpty(),
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Send", fontSize = 10.sp)
@@ -243,7 +226,7 @@ fun KeyboardScreen(
                     // Clear button
                     Button(
                         onClick = {
-                            textFieldValue = TextFieldValue("")
+                            textBuffer = ""
                             lastSentText = ""
                         },
                         modifier = Modifier.weight(1f)

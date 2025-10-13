@@ -50,6 +50,7 @@ class HidService : Service(), HidServiceApi {
 
     private var connectedDevice: BluetoothDevice? = null
     private var isServiceReady = false
+    private var isProfileConnected = false
     private var isAppRegistered = false
 
     override fun onCreate() {
@@ -117,11 +118,22 @@ class HidService : Service(), HidServiceApi {
                             Log.d(TAG, "Device disconnected: ${device.address}")
                         }
                     }
-                    BluetoothProfile.STATE_DISCONNECTING -> {
-                        // Retry registerApp() with exponential backoff
-                        serviceScope.launch {
-                            retryRegisterApp()
+                    BluetoothProfile.STATE_CONNECTING -> {
+                        try {
+                            Log.d(TAG, "Device connecting: ${device.name ?: device.address}")
+                        } catch (_: SecurityException) {
+                            Log.d(TAG, "Device connecting: ${device.address}")
                         }
+                    }
+                    BluetoothProfile.STATE_DISCONNECTING -> {
+                        try {
+                            Log.d(TAG, "Device disconnecting: ${device.name ?: device.address}")
+                        } catch (_: SecurityException) {
+                            Log.d(TAG, "Device disconnecting: ${device.address}")
+                        }
+                        // DO NOT call retryRegisterApp() here - this is a device state change,
+                        // not a profile service disconnection. Device disconnecting is normal
+                        // during connection handshake and should not trigger re-registration.
                     }
                 }
             }
@@ -129,7 +141,7 @@ class HidService : Service(), HidServiceApi {
 
         override fun onAppStatusChanged(registered: Boolean) {
             isAppRegistered = registered
-            HidClient.setHidProfileAvailable(registered)
+            updateServiceReadyState()
             Log.d(TAG, "App registration status: $registered")
         }
     }
@@ -137,19 +149,26 @@ class HidService : Service(), HidServiceApi {
     // Service state listener
     private val serviceStateListener = object : HidDeviceProfile.ServiceStateListener {
         override fun onServiceStateChanged(proxy: BluetoothProfile?) {
-            isServiceReady = proxy != null
-            HidClient.setServiceReady(isServiceReady)
-            HidClient.setHidProfileAvailable(isServiceReady)
+            Log.d(TAG, "HID profile service state changed: ${proxy != null}")
 
-            if (isServiceReady) {
-                // Register HID app when profile is ready
+            isProfileConnected = proxy != null
+
+            if (proxy != null) {
+                // Profile connected - register app and WAIT for confirmation
+                Log.d(TAG, "Profile connected, starting app registration...")
                 serviceScope.launch {
                     delay(100) // Small delay for stability
                     hidDeviceProfile.registerApp(hidDeviceApp)
                 }
+                // DO NOT set isServiceReady here - wait for onAppStatusChanged callback
+            } else {
+                // Profile disconnected - reset all flags
+                isProfileConnected = false
+                isAppRegistered = false
+                Log.d(TAG, "Profile disconnected - resetting service state")
             }
 
-            Log.d(TAG, "HID service state changed: $isServiceReady")
+            updateServiceReadyState()
         }
     }
 
@@ -164,6 +183,29 @@ class HidService : Service(), HidServiceApi {
         override fun onAppStatusChanged(device: BluetoothDevice, registered: Boolean) {
             if (Log.isLoggable(TAG, Log.DEBUG)) {
                 Log.d(TAG, "Profile app status: $registered")
+            }
+        }
+    }
+
+    /**
+     * Update service ready state based on profile connection AND app registration.
+     * Service is only ready when BOTH conditions are met.
+     */
+    private fun updateServiceReadyState() {
+        val wasReady = isServiceReady
+
+        // CRITICAL: Service is only ready when BOTH conditions are met
+        isServiceReady = isProfileConnected && isAppRegistered
+
+        if (isServiceReady != wasReady) {
+            Log.d(TAG, "Service ready state changed: $isServiceReady (profile=$isProfileConnected, app=$isAppRegistered)")
+            HidClient.setServiceReady(isServiceReady)
+            HidClient.setHidProfileAvailable(isServiceReady)
+
+            // If we just became ready, notify HidClient immediately
+            if (isServiceReady) {
+                HidClient.clearError()
+                Log.d(TAG, "✅ HID Service fully initialized and ready for connections")
             }
         }
     }
@@ -186,9 +228,12 @@ class HidService : Service(), HidServiceApi {
         val channel = NotificationChannel(
             CHANNEL_ID,
             "HID Service",
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_HIGH  // Changed from LOW to HIGH to prevent app suspension
         ).apply {
             description = "Keeps Bluetooth HID connection active"
+            setShowBadge(false)  // Don't show notification badge
+            enableVibration(false)  // Don't vibrate
+            enableLights(false)  // Don't use LED
         }
 
         val notificationManager = getSystemService(NotificationManager::class.java)
@@ -197,10 +242,13 @@ class HidService : Service(), HidServiceApi {
 
     private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("InmoWatch HID")
-            .setContentText("HID controller active")
+            .setContentTitle("InmoWatch HID Active")
+            .setContentText("Bluetooth controller ready")
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)  // High priority keeps app alive
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)  // Mark as service
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)  // Immediate start
             .build()
     }
 
@@ -219,11 +267,31 @@ class HidService : Service(), HidServiceApi {
     override fun isDeviceConnected(): Boolean = connectedDevice != null
 
     override fun connectToDevice(device: BluetoothDevice): Boolean {
-        if (!isServiceReady || !isAppRegistered) {
-            Log.w(TAG, "Service not ready or app not registered; cannot connect")
+        // CRITICAL: Strict ready check before attempting connection
+        if (!isServiceReady) {
+            val reason = when {
+                !isProfileConnected -> "HID profile not connected"
+                !isAppRegistered -> "HID app not registered"
+                else -> "Service not initialized"
+            }
+            Log.e(TAG, "❌ Cannot connect to ${device.address}: $reason")
+            HidClient.setConnectionError("Service not ready: $reason")
             return false
         }
-        return hidDeviceProfile.connect(device)
+
+        if (!isProfileConnected || !isAppRegistered) {
+            Log.w(TAG, "Service not ready or app not registered; cannot connect")
+            HidClient.setConnectionError("Service not fully initialized")
+            return false
+        }
+        
+        Log.d(TAG, "✅ Connecting to device: ${device.address}")
+        val success = hidDeviceProfile.connect(device)
+        if (!success) {
+            HidClient.setConnectionError("Failed to initiate connection to ${device.address}")
+            Log.e(TAG, "❌ Connection initiation failed")
+        }
+        return success
     }
 
     // Mouse operations
@@ -297,6 +365,11 @@ class HidService : Service(), HidServiceApi {
             2 -> sendDpadLeft()
             3 -> sendDpadRight()
             4 -> sendDpadCenter()
+            // Diagonals: Send two keys simultaneously
+            5 -> sendDpadDownLeft()     // ↙
+            6 -> sendDpadDownRight()    // ↘
+            7 -> sendDpadUpLeft()       // ↖
+            8 -> sendDpadUpRight()      // ↗
             else -> false
         }
     }
@@ -319,6 +392,28 @@ class HidService : Service(), HidServiceApi {
 
     override fun sendDpadCenter(): Boolean {
         return hidInputManager.sendKey(0x28) // ENTER
+    }
+
+    // Diagonal movements - send two keys simultaneously
+    private fun sendDpadUpLeft(): Boolean {
+        return hidInputManager.sendKeys(intArrayOf(0x52, 0x50)) // UP + LEFT
+    }
+
+    private fun sendDpadUpRight(): Boolean {
+        return hidInputManager.sendKeys(intArrayOf(0x52, 0x4F)) // UP + RIGHT
+    }
+
+    private fun sendDpadDownLeft(): Boolean {
+        return hidInputManager.sendKeys(intArrayOf(0x51, 0x50)) // DOWN + LEFT
+    }
+
+    private fun sendDpadDownRight(): Boolean {
+        return hidInputManager.sendKeys(intArrayOf(0x51, 0x4F)) // DOWN + RIGHT
+    }
+
+    // ESC key for back functionality
+    override fun sendEscape(): Boolean {
+        return hidInputManager.sendKey(0x29) // ESC
     }
 
     // Raw HID
