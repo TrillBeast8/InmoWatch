@@ -45,6 +45,23 @@
 - ✅ **DO**: Provide a verbal summary in chat OR update the relevant sections here
 - ❌ **DON'T**: Create SUMMARY.md or CHANGES.md
 
+### 📝 **When to Update CHANGELOG.md**
+
+**ONLY add to CHANGELOG.md if**:
+- ✅ User can see/feel the change (new feature, fixed crash, removed button)
+- ✅ Major architecture shift (new library, rewritten service)
+- ✅ Breaking change (removed feature, changed workflow)
+- ✅ Critical bug fix (app crash, broken core functionality)
+
+**DON'T add to CHANGELOG.md if**:
+- ❌ Code refactoring with no behavior change
+- ❌ Small UI polish (font size, spacing, color tweak)
+- ❌ Internal code cleanup or optimization
+- ❌ Single-line bug fixes in existing features
+- ❌ Comment updates or documentation tweaks
+
+**Rule of thumb**: If you're unsure, DON'T add it. Changelogs should be scannable in 30 seconds.
+
 ### 🎯 **File Creation Rules**
 
 **ONLY create NEW files for**:
@@ -58,6 +75,8 @@
 - Temporary summaries or change logs
 - Design reference guides
 - Architecture diagrams (use Mermaid blocks in THIS file instead)
+
+**Exception**: `CHANGELOG.md` in repo root is the ONLY separate documentation file allowed. Use it for user-facing feature history only.
 
 ### 🔍 **Before Creating Any .md File**
 
@@ -146,7 +165,194 @@ fun exampleFunction() {
 
 ---
 
-## 🚨 CRITICAL: Build Error Detection (FOR ALL AI ASSISTANTS)
+## � CRITICAL: Read Instructions First Protocol (FOR ALL AI ASSISTANTS)
+
+**⚠️ MANDATORY - ALWAYS READ THIS FILE BEFORE GENERATING SOLUTIONS**
+
+### ✅ **Required Workflow for Every User Request**
+
+**BEFORE** proposing or implementing ANY solution, you MUST:
+
+1. ✅ **READ** this entire `copilot-instructions.md` file
+   - Check for existing patterns that solve the problem
+   - Review relevant screen/component sections
+   - Understand architecture constraints and rules
+   - Identify any anti-patterns to avoid
+
+2. ✅ **SEARCH** the workspace for similar implementations
+   - Use `semantic_search` or `grep_search` to find existing code
+   - Check how similar features are already implemented
+   - Reuse established patterns instead of inventing new ones
+
+3. ✅ **VERIFY** your solution follows documented standards
+   - Animation patterns (spring physics, timing)
+   - State management (StateFlow, collectAsState)
+   - HID communication (always via HidClient)
+   - UI principles (seamless, fluid, elegant)
+
+4. ✅ **UPDATE** this file AFTER implementing changes
+   - Add new patterns to relevant sections
+   - Document new components or screens
+   - Update code examples if behavior changed
+   - Add to "What Changed" section if major feature
+
+### ❌ **Anti-Patterns to AVOID**
+
+```
+❌ WRONG:
+User: "Add a new button to MouseScreen"
+AI: *Immediately creates code* "Here's the button implementation!"
+
+✅ RIGHT:
+User: "Add a new button to MouseScreen"
+AI: *Reads copilot-instructions.md*
+    *Searches for "MouseScreen" implementation*
+    *Reviews button patterns in other screens*
+    *Checks animation standards*
+    → Then proposes solution following established patterns
+    → After implementation, updates MouseScreen section in this file
+```
+
+### 🎯 **Why This Matters**
+
+- **Consistency**: All screens follow the same animation, state, and interaction patterns
+- **Quality**: Reuse battle-tested code instead of reinventing bugs
+- **Documentation**: This file stays current and useful
+- **Efficiency**: Faster development by following proven patterns
+
+**If you skip reading instructions**:
+- ❌ You'll create duplicate implementations
+- ❌ You'll violate established patterns
+- ❌ You'll introduce bugs that were already solved
+- ❌ You'll waste user's time with inconsistent code
+
+---
+
+## 👤 CRITICAL: Agent Mode Approval Protocol (FOR ALL AI ASSISTANTS)
+
+**⚠️ MANDATORY - ALWAYS GET USER APPROVAL BEFORE IMPLEMENTING IN AGENT MODE**
+
+### ✅ **Required Workflow When Operating in Agent/Autonomous Mode**
+
+When the user has enabled **agent mode**, **autonomous mode**, or **multi-step mode**, you MUST:
+
+1. ✅ **STOP** before making any code changes
+2. ✅ **PROPOSE** your solution with clear explanation:
+   ```
+   📋 PROPOSED SOLUTION:
+   
+   I will make the following changes:
+   
+   1. Update `MouseScreen.kt` (lines 120-135)
+      - Add new "Reset" button to toolbar
+      - Wire up to HidClient.resetCursor()
+   
+   2. Add new function to `HidClient.kt`
+      - resetCursor(): Boolean
+      - Sends [0,0] mouse movement
+   
+   3. Update `copilot-instructions.md`
+      - Document new reset pattern
+      - Add to MouseScreen section
+   
+   ⏸️ **WAITING FOR YOUR APPROVAL**
+   Reply with:
+   - "approve" or "yes" to proceed
+   - "no" or "stop" to cancel
+   - Suggestions for changes to the approach
+   ```
+
+3. ✅ **WAIT** for explicit user confirmation
+   - User says: "approve", "yes", "go ahead", "do it" → Proceed
+   - User says: "no", "stop", "wait", "cancel" → Halt immediately
+   - User provides feedback → Revise proposal and ask again
+
+4. ✅ **IMPLEMENT** only after approval received
+
+5. ✅ **REPORT** what was done after completion
+
+### ❌ **What NOT to Do in Agent Mode**
+
+```
+❌ WRONG (Auto-implementing without approval):
+User: "Fix the mouse cursor drift issue"
+AI: *Immediately edits MouseScreen.kt*
+    *Immediately edits HidClient.kt*
+    *Done!*
+
+✅ RIGHT (Propose first, implement after approval):
+User: "Fix the mouse cursor drift issue"
+AI: *Reads instructions*
+    *Analyzes code*
+    *Proposes solution with file-by-file breakdown*
+    
+    📋 PROPOSED SOLUTION:
+    1. Add cursor reset to MouseScreen.kt
+    2. Implement HidClient.resetCursor()
+    3. Update docs
+    
+    ⏸️ WAITING FOR YOUR APPROVAL
+    
+User: "approve"
+AI: *Now implements changes*
+    ✅ Changes complete!
+```
+
+### 🎯 **Why This Protocol Exists**
+
+**Without approval protocol**:
+- ❌ AI might misunderstand requirements and waste time
+- ❌ User can't review approach before code is changed
+- ❌ Mistakes are harder to undo after implementation
+- ❌ User loses control over their codebase
+
+**With approval protocol**:
+- ✅ User reviews approach before any changes
+- ✅ Catches misunderstandings early
+- ✅ User can suggest improvements to the plan
+- ✅ User maintains full control
+
+### 📋 **Approval Request Template**
+
+**Use this format for every proposal**:
+
+```markdown
+📋 PROPOSED SOLUTION:
+
+**Problem**: [Brief description of what needs to be fixed/added]
+
+**Approach**: [High-level strategy]
+
+**Changes**:
+1. **File**: `path/to/file.kt` (lines X-Y)
+   - [What will change]
+   - [Why it's needed]
+
+2. **File**: `path/to/other.kt` (new file)
+   - [What will be created]
+   - [Purpose]
+
+3. **Documentation**: Update `copilot-instructions.md`
+   - [What sections will be updated]
+
+**Testing**: [How to verify the changes work]
+
+⏸️ **WAITING FOR YOUR APPROVAL**
+Reply "approve" to proceed, "no" to cancel, or provide feedback.
+```
+
+### 🚨 **EXCEPTION: Emergency Bug Fixes**
+
+**ONLY skip approval if**:
+- ✅ User explicitly says "just fix it" or "do it now"
+- ✅ User uses urgent language ("emergency", "critical bug", "broke production")
+- ✅ Change is trivial (fixing typo, missing import, syntax error)
+
+**Otherwise, ALWAYS get approval first.**
+
+---
+
+## �🚨 CRITICAL: Build Error Detection (FOR ALL AI ASSISTANTS)
 
 **⚠️ MANDATORY FOR ALL LLMs/AI/COPILOTS - READ THIS BEFORE MAKING ANY CODE CHANGES**
 
@@ -409,39 +615,9 @@ fun handleClick() {
 
 **InmoWatch** is a highly optimized Wear OS application that transforms Galaxy Watch4 into a universal Bluetooth HID (Human Interface Device) controller. The app provides mouse, touchpad, keyboard, media controls, and D-pad input modes for controlling INMO Air2 smart glasses and other Bluetooth-enabled devices.
 
-### ✨ New Features (October 2025)
+### 🔄 Feature History
 
-**1. Universal Quick Launcher** - Beautiful circular menu system
-- **⋮ button** on every screen (replaces old X/Back buttons)
-- Instant navigation to any mode without returning to main menu
-- Circular arrangement of 6 modes (Mouse, Touchpad, Keyboard, Media, D-Pad, Settings)
-- Elegant fade/scale animations with spring physics
-- Current mode highlighted with reduced opacity
-- File: `ui/components/QuickLauncher.kt`
-
-**2. Bezel/Rotary Input for MediaScreen**
-- **Rotate watch bezel** to control volume on target device
-- Clockwise rotation = Volume Up
-- Counter-clockwise rotation = Volume Down
-- Visual feedback with "Vol +" / "Vol -" overlay
-- Uses Wear OS `onRotaryScrollEvent` modifier
-- **Universal control** - works with any HID device
-
-**3. Button-Based D-Pad** (October 13, 2025)
-- ❌ **REMOVED**: Gesture-based circular D-pad (unreliable)
-- ✅ **NEW**: Physical button layout for reliable input
-- 3x3 button grid: `↖ ↑ ↗` / `← ● →` / `↙ ↓ ↘`
-- Mode toggle: D-Pad (8-way directional) ↔ Scroll (4-way + click)
-- Diagonal buttons hidden in scroll mode
-- Smooth spring animations for feedback
-- Quick Launcher integration (⋮ button)
-- File: `ui/screens/DpadScreen.kt` (completely rewritten)
-
-**4. Removed Two-Finger Swipe Navigation** (October 13, 2025)
-- ❌ **REMOVED**: Two-finger horizontal swipe gesture (caused conflicts)
-- Reason: Interfered with single-finger gestures and touch detection
-- Replaced by: Quick Launcher menu on all screens
-- Deleted file: `ui/gestures/TwoFingerSwipe.kt`
+**For detailed changelog and feature history**, see [`CHANGELOG.md`](../CHANGELOG.md) in the repo root.
 
 ### Target Platforms
 - **Primary**: Samsung Galaxy Watch4 (Wear OS 3+)
@@ -467,13 +643,21 @@ fun handleClick() {
 - Requests runtime Bluetooth permissions (BLUETOOTH_SCAN, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE)
 - Starts and binds `HidService` as a foreground service
 - Routes navigation through Jetpack Compose NavHost
-- Handles double-back press exit logic via `SettingsStore.remoteBackDoubleClick`
+- **Remote Back Button Control**: Press duration detection for sending HID commands to target device
+  - Single press (< 500ms) → Send ESC key via `HidClient.sendEscapeKey()`
+  - 3-second hold (≥ 3000ms) → Send Windows/Home key via `HidClient.sendWindowsKey()`
+  - Shows visual feedback text ("ESC" or "Home") in center of screen for 1 second
+  - Only active when `SettingsStore.remoteBackDoubleClick` enabled AND device connected
 
 **Critical Rules**:
 - ✅ **NEVER** call BluetoothHidDevice APIs directly from UI code
 - ✅ All Bluetooth interactions **MUST** route through `HidService` and `HidClient`
 - ✅ Preserve foreground service lifecycle to avoid Samsung doze killing connections
 - ✅ Use `startForegroundService()` on API 26+ for background Bluetooth operations
+- ✅ **Android 14+ Requirement**: ALL three Bluetooth permissions (SCAN, CONNECT, ADVERTISE) must be granted at runtime BEFORE starting HidService with foregroundServiceType="connectedDevice"
+- ✅ Manifest must declare `FOREGROUND_SERVICE_CONNECTED_DEVICE` permission for Android 14+
+- ✅ **Remote Back Button**: Track `backPressStartTime` on first press, calculate duration on second press/release
+- ✅ **Visual Feedback**: Use `feedbackText` state with `LaunchedEffect` to auto-clear after 1 second
 
 ---
 
@@ -527,6 +711,10 @@ fun sendDpadUp/Down/Left/Right/Center(): Boolean
 // Keyboard
 fun sendKey(keyCode: Int, modifiers: Int = 0): Boolean
 fun sendText(text: String): Boolean
+
+// Remote Back Button Controls (for target device control)
+fun sendEscapeKey(): Boolean  // ESC key (0x29 scan code)
+fun sendWindowsKey(): Boolean // Windows/Home key (0x08 modifier)
 
 // Raw HID
 fun sendRawInput(data: ByteArray): Boolean

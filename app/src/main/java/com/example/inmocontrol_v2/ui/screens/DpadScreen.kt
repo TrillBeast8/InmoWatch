@@ -68,6 +68,9 @@ fun DpadScreen(
         }
     }
 
+    // Disable predictive back gesture to prevent accidental navigation during D-pad usage
+    androidx.activity.compose.PredictiveBackHandler(enabled = false) { }
+
     Scaffold(
         timeText = { TimeText() }
     ) {
@@ -229,37 +232,28 @@ fun DpadScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Mode toggle and ESC button row
+                // Mode toggle and ESC button row (compact icon-only design)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Mode toggle chip
-                    Chip(
+                    // Mode toggle button (icon only)
+                    Button(
                         onClick = { isScrollMode = !isScrollMode },
-                        label = {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = if (isScrollMode) Icons.Default.SwapVert else Icons.Default.Apps,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = if (isScrollMode) "Scroll" else "D-Pad",
-                                    fontSize = 11.sp
-                                )
-                            }
-                        },
-                        modifier = Modifier.height(32.dp),
-                        colors = ChipDefaults.chipColors(
+                        modifier = Modifier.size(40.dp),
+                        colors = ButtonDefaults.buttonColors(
                             backgroundColor = if (isScrollMode)
-                                MaterialTheme.colors.secondary.copy(alpha = 0.3f)
-                            else MaterialTheme.colors.primary.copy(alpha = 0.3f)
+                                MaterialTheme.colors.secondary.copy(alpha = 0.4f)
+                            else MaterialTheme.colors.primary.copy(alpha = 0.4f)
+                        ),
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            imageVector = if (isScrollMode) Icons.Default.SwapVert else Icons.Default.Apps,
+                            contentDescription = if (isScrollMode) "Scroll Mode" else "D-Pad Mode",
+                            modifier = Modifier.size(20.dp)
                         )
-                    )
+                    }
 
                     // ESC button
                     Button(
@@ -269,13 +263,13 @@ fun DpadScreen(
                             }
                         },
                         enabled = isConnected,
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(40.dp),
                         colors = ButtonDefaults.buttonColors(
                             backgroundColor = MaterialTheme.colors.error.copy(alpha = 0.4f)
                         ),
                         shape = CircleShape
                     ) {
-                        Text("⎋", fontSize = 14.sp)
+                        Text("⎋", fontSize = 16.sp)
                     }
                 }
             }

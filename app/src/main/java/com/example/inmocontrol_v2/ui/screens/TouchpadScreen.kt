@@ -93,6 +93,9 @@ fun TouchpadScreen(
         }
     }
 
+    // Disable predictive back gesture to prevent accidental navigation during touchpad swipes
+    androidx.activity.compose.PredictiveBackHandler(enabled = false) { }
+
     Scaffold(
         timeText = { TimeText() },
         modifier = Modifier

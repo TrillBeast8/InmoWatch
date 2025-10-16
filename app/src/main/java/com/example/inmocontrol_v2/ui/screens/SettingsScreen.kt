@@ -22,6 +22,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 fun SettingsScreen(
     onBack: () -> Unit = {},
     onNavigateToMouseCalibration: () -> Unit = {},
+    onNavigateToConnect: () -> Unit = {},
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {}
 ) {
@@ -32,6 +33,7 @@ fun SettingsScreen(
     val remoteBackDoubleClick by settingsStore.remoteBackDoubleClick.collectAsState(initial = false)
     val realtimeKeyboard by settingsStore.realtimeKeyboard.collectAsState(initial = false)
     val scrollSensitivity by settingsStore.scrollSensitivity.collectAsState(initial = 1.0f)
+    val isConnected by com.example.inmocontrol_v2.hid.HidClient.isConnected.collectAsState()
 
     Scaffold(
         timeText = { TimeText() },
@@ -174,7 +176,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Remote Back Double Click Toggle
+            // Remote Back Button Control Toggle
             item {
                 ToggleChip(
                     checked = remoteBackDoubleClick,
@@ -183,7 +185,7 @@ fun SettingsScreen(
                     },
                     label = {
                         WearText(
-                            text = "Remote Back Double Click",
+                            text = "Back Button Controls Target",
                             textAlign = TextAlign.Center
                         )
                     },
@@ -227,6 +229,19 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     WearText("Mouse Calibration")
+                }
+            }
+
+            // Connect Device Button (only show when not connected)
+            if (!isConnected) {
+                item {
+                    Button(
+                        onClick = { onNavigateToConnect() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.primaryButtonColors()
+                    ) {
+                        WearText("Connect Device")
+                    }
                 }
             }
 

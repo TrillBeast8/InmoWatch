@@ -100,6 +100,9 @@ fun MouseScreen(
         }
     }
 
+    // Disable predictive back gesture to prevent accidental navigation during mouse movements
+    androidx.activity.compose.PredictiveBackHandler(enabled = false) { }
+
     Scaffold(
         timeText = {
             AnimatedVisibility(

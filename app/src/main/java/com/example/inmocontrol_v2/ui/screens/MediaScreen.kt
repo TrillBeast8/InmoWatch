@@ -123,6 +123,9 @@ fun MediaScreen(
     val secondaryColor = MaterialTheme.colors.secondary
     val surfaceColor = MaterialTheme.colors.surface
 
+    // Disable predictive back gesture to prevent accidental navigation during media control gestures
+    androidx.activity.compose.PredictiveBackHandler(enabled = false) { }
+
     Scaffold(
         timeText = { TimeText() },
         modifier = Modifier

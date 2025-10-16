@@ -271,6 +271,24 @@ object HidClient {
         return getService()?.sendEscape() ?: false
     }
 
+    // ==================== REMOTE BACK BUTTON CONTROLS ====================
+
+    /**
+     * Send ESC key to target device (for Remote Back Button single press)
+     * HID Scan Code: 0x29
+     */
+    fun sendEscapeKey(): Boolean {
+        return sendKey(keyCode = 0x29, modifiers = 0)
+    }
+
+    /**
+     * Send Windows/Home key to target device (for Remote Back Button 3-sec hold)
+     * HID Modifier: 0x08 (Left GUI/Windows key)
+     */
+    fun sendWindowsKey(): Boolean {
+        return sendKey(keyCode = 0x00, modifiers = 0x08)
+    }
+
     // ==================== RAW HID ====================
 
     fun sendRawInput(data: ByteArray): Boolean {

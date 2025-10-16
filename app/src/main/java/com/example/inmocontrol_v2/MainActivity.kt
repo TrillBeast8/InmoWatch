@@ -9,15 +9,24 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.core.content.ContextCompat
+import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Scaffold
+import androidx.wear.compose.material.Text
 import com.example.inmocontrol_v2.nav.NavRoutes
 import com.example.inmocontrol_v2.ui.screens.*
 import com.example.inmocontrol_v2.ui.theme.InmoTheme
@@ -30,7 +39,7 @@ import com.example.inmocontrol_v2.data.SettingsStore
  */
 class MainActivity : ComponentActivity() {
     companion object {
-        private const val DOUBLE_CLICK_THRESHOLD = 400L
+        private const val HOLD_THRESHOLD_MS = 3000L // 3 seconds for Windows/Home key
     }
 
     // Modern permission launcher
@@ -80,7 +89,8 @@ class MainActivity : ComponentActivity() {
     private fun hasBluetoothPermissions(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
         } else {
             true
         }
@@ -97,6 +107,10 @@ class MainActivity : ComponentActivity() {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE)
                 != PackageManager.PERMISSION_GRANTED) {
                 permissionsToRequest.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
             }
         }
 
@@ -136,11 +150,15 @@ class MainActivity : ComponentActivity() {
         val navController = rememberNavController()
         val context = LocalContext.current
 
-        // Optimized back button handling - defer settings access until needed
-        var lastBackPressTime by remember { mutableLongStateOf(0L) }
+        // Remote Back Button feature state
+        var backPressStartTime by remember { mutableLongStateOf(0L) }
+        var feedbackText by remember { mutableStateOf<String?>(null) }
+        
         val remoteBackDoubleClick by remember {
             SettingsStore.get(context).remoteBackDoubleClick
         }.collectAsState(initial = false)
+        
+        val isConnected by HidClient.isConnected.collectAsState()
 
         val screens = listOf(
             NavRoutes.Mouse,
@@ -167,30 +185,42 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        BackHandler(enabled = true) {
-            val currentTime = System.currentTimeMillis()
-            if (remoteBackDoubleClick) {
-                if (currentTime - lastBackPressTime < DOUBLE_CLICK_THRESHOLD) {
-                    // Exit app on double-press
-                    finish()
-                } else {
-                    lastBackPressTime = currentTime
-                    // On single press, navigate back if not on main menu
-                    if (navController.currentBackStackEntry?.destination?.route != NavRoutes.MainMenu) {
-                        navController.popBackStack()
-                    }
-                }
+        // Remote Back Button Handler - Press duration detection
+        BackHandler(enabled = remoteBackDoubleClick && isConnected) {
+            val pressDuration = System.currentTimeMillis() - backPressStartTime
+            
+            if (backPressStartTime == 0L) {
+                // First press - record start time
+                backPressStartTime = System.currentTimeMillis()
             } else {
-                // Default behavior: navigate back or exit if at start
-                if (navController.currentBackStackEntry?.destination?.route != NavRoutes.MainMenu) {
-                    navController.popBackStack()
-                } else {
-                    finish()
+                // Release - check duration
+                if (pressDuration < 500) {
+                    // Single press - Send ESC
+                    HidClient.sendEscapeKey()
+                    feedbackText = "ESC"
+                } else if (pressDuration >= HOLD_THRESHOLD_MS) {
+                    // 3-second hold - Send Windows/Home key
+                    HidClient.sendWindowsKey()
+                    feedbackText = "Home"
                 }
+                
+                // Reset for next press
+                backPressStartTime = 0L
             }
         }
 
-        NavHost(navController = navController, startDestination = NavRoutes.MainMenu) {
+        // Default navigation back handler (when remote back disabled or not connected)
+        BackHandler(enabled = !remoteBackDoubleClick || !isConnected) {
+            if (navController.currentBackStackEntry?.destination?.route != NavRoutes.MainMenu) {
+                navController.popBackStack()
+            } else {
+                finish()
+            }
+        }
+
+        // Visual Feedback Text Overlay
+        Box(modifier = Modifier.fillMaxSize()) {
+            NavHost(navController = navController, startDestination = NavRoutes.MainMenu) {
             composable(NavRoutes.MainMenu) {
                 MainMenuScreen(
                     onNavigateToMouse = { navController.navigate(NavRoutes.Mouse) },
@@ -236,7 +266,8 @@ class MainActivity : ComponentActivity() {
             composable(NavRoutes.Settings) {
                 SettingsScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigateToMouseCalibration = { navController.navigate(NavRoutes.MouseCalibration) }
+                    onNavigateToMouseCalibration = { navController.navigate(NavRoutes.MouseCalibration) },
+                    onNavigateToConnect = { navController.navigate(NavRoutes.ConnectDevice) }
                 )
             }
             composable(NavRoutes.MouseCalibration) {
@@ -250,5 +281,31 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+        
+        // Text feedback overlay (appears in center of screen)
+        feedbackText?.let { text ->
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.title1,
+                    color = Color.White,
+                    modifier = Modifier
+                        .background(
+                            color = Color.Black.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 24.dp, vertical = 12.dp)
+                )
+            }
+            
+            LaunchedEffect(text) {
+                kotlinx.coroutines.delay(1000) // Show for 1 second
+                feedbackText = null
+            }
+        }
+    }
     }
 }
